@@ -90,6 +90,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     if (log?.removed || typeof log?.address !== "string" || log.address.toLowerCase() !== factory.toLowerCase()) continue;
     if (!isHash(log.transactionHash) || log.transactionHash.toLowerCase() !== hash || !isHash(log.blockHash) || log.blockHash.toLowerCase() !== receipt.blockHash.toLowerCase() || log.blockNumber !== receipt.blockNumber)
       throw new RadarError("The RPC returned a log from a different receipt or block.", "invalid_receipt");
+    if (!Array.isArray(log.topics) || log.topics.length !== 4 || !log.topics.every(isHash) || typeof log.data !== "string" || !/^0x[0-9a-f]{192}$/i.test(log.data)) continue;
     let event;
     try { event = decodeEventLog({ abi: [launchEvent], data: log.data, topics: log.topics }); }
     catch { continue; } // Ignore unrelated or malformed logs.

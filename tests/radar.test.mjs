@@ -317,3 +317,10 @@ test("reject zero token addresses before issuing RPC calls", async () => {
   await assert.rejects(inspectLaunch(zero, client), error => error.code === "invalid_input");
   await assert.rejects(inspectLaunch(hash, client, zero), error => error.code === "invalid_selection");
 });
+
+
+test("require exact launch event ABI framing including topic and data lengths", async () => {
+  for (const log of [{ ...event(), data: event().data + "00".repeat(32) }, { ...event(), topics: [...event().topics, hash] }, { ...event(), topics: event().topics.slice(0, 3) }]) {
+    await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), logs: [log] }) }), error => error.code === "launch_not_found");
+  }
+});
