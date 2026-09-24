@@ -195,3 +195,18 @@ test("CLI documents options and returns machine-readable validation failures", (
     assert.match(JSON.parse(result.stderr).error.code, /^invalid_(input|options)$/);
   }
 });
+
+
+test("reject malformed RPC responses with stable codes instead of TypeErrors", async () => {
+  const client = fixtureClient();
+  for (const value of [null, undefined, {}]) {
+    await assert.rejects(inspectLaunch(hash, { ...client, getTransactionReceipt: async () => value }), error => error.code === "invalid_receipt");
+    await assert.rejects(inspectLaunch(hash, { ...client, getBlock: async () => value }), error => error.code === "invalid_metadata_block");
+    await assert.rejects(inspectLaunch(token, { ...client, getLogs: async () => value }), error => error.code === "invalid_receipt");
+  }
+  for (const value of [null, -1n, 80000000]) await assert.rejects(inspectLaunch(token, { ...client, getBlockNumber: async () => value }), error => error.code === "invalid_block");
+  assert.equal((await inspectLaunch(token, { ...client, getLogs: async () => [null, {}, { transactionHash: hash }] })).hash, hash);
+  for (const [height, code] of [[79_999_999n, "launch_reorg"], [80_000_000n, "metadata_reorg"]]) {
+    await assert.rejects(inspectLaunch(hash, { ...client, getBlock: async input => input.blockNumber === height ? null : client.getBlock(input) }), error => error.code === code);
+  }
+});

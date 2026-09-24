@@ -47,6 +47,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     token = value;
     if (selectedToken && selectedToken.toLowerCase() !== token.toLowerCase()) throw new RadarError("The selected token does not match the input.", "token_mismatch");
     let end = await client.getBlockNumber();
+    if (typeof end !== "bigint" || end < 0n) throw new RadarError("The RPC returned an invalid chain height.", "invalid_block");
     // ponytail: at most ten successful windows and forty RPC attempts per lookup.
     let span = 800_000n, windows = 0, attempts = 0;
     while (windows < 10 && attempts < 40 && end >= 70_000_000n) {
@@ -61,8 +62,9 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
         span = span / 2n || 1n;
         continue;
       }
+      if (!Array.isArray(logs)) throw new RadarError("The RPC returned an invalid log list.", "invalid_receipt");
       windows++;
-      const candidate = logs.find(log => !log.removed && isHash(log.transactionHash));
+      const candidate = logs.find(log => log && !log.removed && isHash(log.transactionHash));
       if (candidate) { hash = candidate.transactionHash; break; }
       end = start - 1n;
     }
@@ -71,7 +73,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
 
   hash = hash.toLowerCase();
   const receipt = await client.getTransactionReceipt({ hash });
-  if (!Array.isArray(receipt.logs) || !isHash(receipt.transactionHash) || receipt.transactionHash.toLowerCase() !== hash.toLowerCase() || !isHash(receipt.blockHash) || typeof receipt.blockNumber !== "bigint" || receipt.blockNumber < 0n)
+  if (!Array.isArray(receipt?.logs) || !isHash(receipt.transactionHash) || receipt.transactionHash.toLowerCase() !== hash.toLowerCase() || !isHash(receipt.blockHash) || typeof receipt.blockNumber !== "bigint" || receipt.blockNumber < 0n)
     throw new RadarError("The RPC returned an inconsistent transaction receipt.", "invalid_receipt");
   if (receipt.status !== "success") throw new RadarError("This transaction has not confirmed a successful launch.", "launch_reverted");
   const tokens = new Set();
@@ -90,7 +92,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
   token = getAddress(expected || [...tokens][0]);
 
   const snapshot = await client.getBlock({ blockTag: "latest" });
-  if (!isHash(snapshot.hash) || typeof snapshot.number !== "bigint" || snapshot.number < receipt.blockNumber)
+  if (!isHash(snapshot?.hash) || typeof snapshot.number !== "bigint" || snapshot.number < receipt.blockNumber)
     throw new RadarError("The RPC returned an invalid metadata block.", "invalid_metadata_block");
   const confirmations = snapshot.number - receipt.blockNumber + 1n;
   if (confirmations < BigInt(minConfirmations)) throw new RadarError("The launch has not reached the requested confirmation depth.", "insufficient_confirmations");
@@ -102,9 +104,9 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     client.getBlock({ blockNumber: receipt.blockNumber }),
     client.getBlock({ blockNumber: snapshot.number }),
   ]);
-  if (!isHash(block.hash) || block.number !== receipt.blockNumber || block.hash.toLowerCase() !== receipt.blockHash.toLowerCase())
+  if (!isHash(block?.hash) || block.number !== receipt.blockNumber || block.hash.toLowerCase() !== receipt.blockHash.toLowerCase())
     throw new RadarError("The launch block changed. Retry once the chain settles.", "launch_reorg");
-  if (!isHash(checkedSnapshot.hash) || checkedSnapshot.number !== snapshot.number || checkedSnapshot.hash.toLowerCase() !== snapshot.hash.toLowerCase())
+  if (!isHash(checkedSnapshot?.hash) || checkedSnapshot.number !== snapshot.number || checkedSnapshot.hash.toLowerCase() !== snapshot.hash.toLowerCase())
     throw new RadarError("The metadata block changed. Retry once the chain settles.", "metadata_reorg");
   if (typeof block.timestamp !== "bigint" || block.timestamp < 0n || block.timestamp > 8_640_000_000_000n)
     throw new RadarError("The RPC returned an invalid block timestamp.", "invalid_block");
