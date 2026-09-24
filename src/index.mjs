@@ -36,8 +36,9 @@ export function radarClient(rpcUrl, { signal, timeoutMs = 12_000 } = {}) {
   }) });
 }
 
-export async function inspectLaunch(input, client = radarClient(), selectedToken, { minConfirmations = 1, fromBlock, toBlock } = {}) {
+export async function inspectLaunch(input, client = radarClient(), selectedToken, { minConfirmations = 1, fromBlock, toBlock, blockTag = "latest" } = {}) {
   if (!Number.isSafeInteger(minConfirmations) || minConfirmations < 1) throw new RadarError("Minimum confirmations must be a positive integer.", "invalid_options");
+  if (!["latest", "safe", "finalized"].includes(blockTag)) throw new RadarError("Metadata block tag must be latest, safe or finalized.", "invalid_options");
   const value = typeof input === "string" ? input.trim() : "";
   if (!isAddress(value) && !isHash(value)) throw new RadarError("Use a token address or launch transaction hash.", "invalid_input");
   if ([fromBlock, toBlock].some(height => height !== undefined && (typeof height !== "bigint" || height < 70_000_000n)) || fromBlock !== undefined && toBlock !== undefined && fromBlock > toBlock || (fromBlock !== undefined || toBlock !== undefined) && !isAddress(value))
@@ -104,9 +105,10 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
   token = getAddress(expected || tokens.keys().next().value);
   const launch = tokens.get(token.toLowerCase());
 
-  const snapshot = await client.getBlock({ blockTag: "latest" });
-  if (!isHash(snapshot?.hash) || typeof snapshot.number !== "bigint" || snapshot.number < receipt.blockNumber)
+  const snapshot = await client.getBlock({ blockTag });
+  if (!isHash(snapshot?.hash) || typeof snapshot.number !== "bigint" || snapshot.number < 0n)
     throw new RadarError("The RPC returned an invalid metadata block.", "invalid_metadata_block");
+  if (snapshot.number < receipt.blockNumber) throw new RadarError("The launch is not included in the selected metadata block yet.", "insufficient_confirmations");
   const confirmations = snapshot.number - receipt.blockNumber + 1n;
   if (confirmations < BigInt(minConfirmations)) throw new RadarError("The launch has not reached the requested confirmation depth.", "insufficient_confirmations");
   // Pin all metadata reads to one recent block; archive state is not required.
@@ -144,7 +146,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     launchConfigId: launch.launchConfigId.toString(), graduationThreshold: launch.graduationThreshold.toString(),
     blockHash: receipt.blockHash.toLowerCase(),
     block: receipt.blockNumber.toString(), confirmedAt: new Date(Number(block.timestamp) * 1000).toISOString(),
-    checkedAt: new Date().toISOString(), metadataState: "current",
+    checkedAt: new Date().toISOString(), metadataState: "current", metadataBlockTag: blockTag,
     metadataBlock: snapshot.number.toString(), metadataBlockHash: snapshot.hash, confirmations: confirmations.toString(),
   };
 }

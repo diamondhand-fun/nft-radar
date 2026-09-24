@@ -1,13 +1,14 @@
 import { parseArgs } from "node:util";
 import { inspectLaunch, radarClient, RadarError } from "./index.mjs";
 
-const usage = "Usage: npm run --silent inspect -- [--confirmations N] [--timeout MS] [--from-block N] [--to-block N] [--json-errors] <token-or-tx-hash> [selected-token]";
+const usage = "Usage: npm run --silent inspect -- [--confirmations N] [--timeout MS] [--block-tag latest|safe|finalized] [--from-block N] [--to-block N] [--json-errors] <token-or-tx-hash> [selected-token]";
 const jsonErrors = process.argv.includes("--json-errors");
 try {
   let args;
   try {
     args = parseArgs({ allowPositionals: true, options: {
       help: { type: "boolean", short: "h" }, "json-errors": { type: "boolean" },
+      "block-tag": { type: "string", default: "latest" },
       "from-block": { type: "string" }, "to-block": { type: "string" },
       confirmations: { type: "string", default: "1" }, timeout: { type: "string", default: "12000" },
     } });
@@ -25,7 +26,7 @@ try {
       }
     }
     const client = radarClient(process.env.RADAR_RPC_URL, { timeoutMs: Number(values.timeout) });
-    const report = await inspectLaunch(positionals[0], client, positionals[1], { minConfirmations: Number(values.confirmations), ...bounds });
+    const report = await inspectLaunch(positionals[0], client, positionals[1], { minConfirmations: Number(values.confirmations), blockTag: values["block-tag"], ...bounds });
     console.log(JSON.stringify(report, null, 2));
   }
 } catch (error) {

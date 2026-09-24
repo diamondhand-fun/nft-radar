@@ -68,8 +68,11 @@ The report also includes the launch `blockHash` and event provenance: `curve`,
 `deployer`, `pairToken`, `launchConfigId` and `graduationThreshold`. The two
 uint256 event values are decimal strings, including values above 2^53.
 
-`metadataState: "current"` means the latest block captured at the start of
-metadata retrieval. All four contract reads use that exact block number and its
+`metadataState: "current"` means the selected recent block captured at the start
+of metadata retrieval, defaulting to `latest`. Set `{ blockTag: "safe" }` or
+`{ blockTag: "finalized" }` (CLI: `--block-tag finalized`) to use those RPC tags.
+Unsupported tags fail without falling back; `metadataBlockTag` records the choice.
+Confirmation depth is measured against that selected block. All four contract reads use that exact block number and its
 hash is checked again afterward. Metadata is not reconstructed at launch time.
 `confirmedAt` is the receipt block's timestamp, not a finality guarantee.
 A matching reference establishes what the token claims about its

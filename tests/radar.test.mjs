@@ -293,3 +293,19 @@ test("bound metadata and reject artwork URLs normalized from control characters"
   const report = await inspectLaunch(hash, { ...client, readContract: async input => input.functionName === "logo" ? "https://example.com/a%20b.png" : client.readContract(input) });
   assert.equal(report.imageUrl, "https://example.com/a%20b.png");
 });
+
+
+test("pin metadata to safe or finalized blocks without silently falling back", async () => {
+  const client = fixtureClient();
+  for (const blockTag of ["safe", "finalized"]) {
+    const report = await inspectLaunch(hash, { ...client, getBlock: async input => {
+      if (input.blockNumber === undefined) assert.equal(input.blockTag, blockTag);
+      return client.getBlock(input);
+    } }, undefined, { blockTag });
+    assert.equal(report.metadataBlockTag, blockTag);
+  }
+  await assert.rejects(inspectLaunch(hash, client, undefined, { blockTag: "pending" }), error => error.code === "invalid_options");
+  await assert.rejects(inspectLaunch(hash, { ...client, getBlock: async () => ({ ...await client.getBlock(), number: 79_999_998n }), readContract: () => assert.fail("Launch is not finalized") }, undefined, { blockTag: "finalized" }), error => error.code === "insufficient_confirmations");
+  const unsupported = new Error("unsupported block tag");
+  await assert.rejects(inspectLaunch(hash, { ...client, getBlock: async () => { throw unsupported; } }, undefined, { blockTag: "safe" }), error => error === unsupported);
+});
