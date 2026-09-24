@@ -30,3 +30,20 @@ test("bound streamed RPC bodies and cancel stalled transfers", async () => {
     assert.throws(() => radarClient("file:///tmp/rpc"), /HTTP/);
   } finally { server.closeAllConnections(); server.close(); }
 });
+
+
+test("never forward RPC traffic or URL credentials through redirects", async () => {
+  let forwarded = 0;
+  const server = createServer((request, response) => {
+    if (request.url === "/redirect?api-key=test") {
+      response.writeHead(307, { Location: "/destination" });
+      response.end();
+    } else { forwarded++; response.end('{}'); }
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  try {
+    await assert.rejects(radarClient(`http://127.0.0.1:${server.address().port}/redirect?api-key=test`).getChainId());
+    assert.equal(forwarded, 0);
+  } finally { server.closeAllConnections(); server.close(); }
+});

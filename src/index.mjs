@@ -30,7 +30,7 @@ export function radarClient(rpcUrl, { signal, timeoutMs = 12_000 } = {}) {
   if (!["https:", "http:"].includes(url.protocol)) throw new RadarError("RPC URL must use HTTP or HTTPS.", "invalid_options");
   return createPublicClient({ chain, transport: http(url.href, {
     timeout: timeoutMs, retryCount: 0, maxResponseBodySize: 2_000_000,
-    fetchFn: (input, init) => fetch(input, { ...init,
+    fetchFn: (input, init) => fetch(input, { ...init, redirect: "error",
       signal: AbortSignal.any([init?.signal, signal, AbortSignal.timeout(timeoutMs)].filter(Boolean)),
     }),
   }) });
