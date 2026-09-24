@@ -181,3 +181,17 @@ test("shrink rejected RPC ranges without skipping blocks or retrying outages", a
   await assert.rejects(inspectLaunch(token, { ...client, getLogs: async () => { count++; throw outage; } }), error => error === outage);
   assert.equal(count, 1);
 });
+
+
+test("CLI documents options and returns machine-readable validation failures", () => {
+  const cli = new URL("../src/cli.mjs", import.meta.url).pathname;
+  const help = spawnSync(process.execPath, [cli, "--help"], { encoding: "utf8" });
+  assert.equal(help.status, 0);
+  assert.match(help.stdout, /--confirmations/);
+  for (const args of [["bad"], ["--confirmations", "zero", hash]]) {
+    const result = spawnSync(process.execPath, [cli, "--json-errors", ...args], { encoding: "utf8" });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.match(JSON.parse(result.stderr).error.code, /^invalid_(input|options)$/);
+  }
+});

@@ -108,3 +108,8 @@ RPC responses are limited to 2 MB and each complete transfer, including the
 response body, has a 12-second deadline. Use
 `radarClient(url, { signal, timeoutMs: 5000 })` for cancellation or a tighter
 deadline. Timeouts must be 1–120,000 ms. Failed requests are not retried.
+
+For automation, the CLI accepts `--confirmations 12`, `--timeout 5000` and
+`--json-errors`. Reports go to stdout; failures go to stderr as
+`{"error":{"code":"...","message":"..."}}` with exit status 1. Upstream RPC
+URLs and messages are redacted from failures. `--help` lists the available flags.

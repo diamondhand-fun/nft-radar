@@ -12,6 +12,11 @@ test("CLI crosses the real HTTP/JSON-RPC and ABI boundary", async () => {
   const { toFunctionSelector } = await import("viem");
   const selectors = Object.fromEntries(Object.entries(metadata).map(([name, value]) => [toFunctionSelector(`${name}()`), value]));
   const server = createServer(async (request, response) => {
+    if (request.url === "/provider-secret") {
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -32000, message: "provider-secret in upstream error" } }));
+      return;
+    }
     let raw = "";
     for await (const chunk of request) raw += chunk;
     const { id, method, params } = JSON.parse(raw);
@@ -51,5 +56,14 @@ test("CLI crosses the real HTTP/JSON-RPC and ABI boundary", async () => {
     assert.equal(calls.length, 4);
     assert(calls.every(params => params[1] === "0x4c4b400"));
     assert.equal(methods.filter(method => method === "eth_getTransactionReceipt").length, 1);
+    const failed = spawn(process.execPath, [new URL("../src/cli.mjs", import.meta.url).pathname, "--json-errors", hash], {
+      env: { ...process.env, RADAR_RPC_URL: `http://127.0.0.1:${server.address().port}/provider-secret` },
+    });
+    let failure = "";
+    failed.stderr.on("data", chunk => { failure += chunk; });
+    const [failedCode] = await once(failed, "close");
+    assert.equal(failedCode, 1);
+    assert.equal(JSON.parse(failure).error.code, "rpc_error");
+    assert(!failure.includes("provider-secret"));
   } finally { server.closeAllConnections(); server.close(); }
 });
