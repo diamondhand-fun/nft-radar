@@ -84,20 +84,21 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
   if (!Array.isArray(receipt?.logs) || !isHash(receipt.transactionHash) || receipt.transactionHash.toLowerCase() !== hash.toLowerCase() || !isHash(receipt.blockHash) || typeof receipt.blockNumber !== "bigint" || receipt.blockNumber < 0n)
     throw new RadarError("The RPC returned an inconsistent transaction receipt.", "invalid_receipt");
   if (receipt.status !== "success") throw new RadarError("This transaction has not confirmed a successful launch.", "launch_reverted");
-  const tokens = new Set();
+  const tokens = new Map();
   for (const log of receipt.logs) {
     if (log?.removed || typeof log?.address !== "string" || log.address.toLowerCase() !== factory.toLowerCase()) continue;
     if (!isHash(log.transactionHash) || log.transactionHash.toLowerCase() !== hash || !isHash(log.blockHash) || log.blockHash.toLowerCase() !== receipt.blockHash.toLowerCase() || log.blockNumber !== receipt.blockNumber)
       throw new RadarError("The RPC returned a log from a different receipt or block.", "invalid_receipt");
     try {
       const event = decodeEventLog({ abi: [launchEvent], data: log.data, topics: log.topics });
-      tokens.add(event.args.token.toLowerCase());
+      tokens.set(event.args.token.toLowerCase(), event.args);
     } catch { /* Ignore unrelated or malformed logs. */ }
   }
   const expected = token || selectedToken;
   if (expected && !tokens.has(expected.toLowerCase())) throw new RadarError("No matching token launch was found in this transaction.", "token_mismatch");
   if (!expected && tokens.size !== 1) throw new RadarError(tokens.size ? "This transaction contains several launches. Select a token." : "No supported factory launch found in this transaction.", tokens.size ? "ambiguous_launch" : "launch_not_found");
-  token = getAddress(expected || [...tokens][0]);
+  token = getAddress(expected || tokens.keys().next().value);
+  const launch = tokens.get(token.toLowerCase());
 
   const snapshot = await client.getBlock({ blockTag: "latest" });
   if (!isHash(snapshot?.hash) || typeof snapshot.number !== "bigint" || snapshot.number < receipt.blockNumber)
@@ -133,6 +134,9 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
   return {
     schema: "diamond-hand.launch-check.v1", chainId: chain.id, factory,
     token, hash, sourceUrl, name, symbol, imageUrl,
+    curve: getAddress(launch.curve), deployer: getAddress(launch.deployer), pairToken: getAddress(launch.pairToken),
+    launchConfigId: launch.launchConfigId.toString(), graduationThreshold: launch.graduationThreshold.toString(),
+    blockHash: receipt.blockHash.toLowerCase(),
     block: receipt.blockNumber.toString(), confirmedAt: new Date(Number(block.timestamp) * 1000).toISOString(),
     checkedAt: new Date().toISOString(), metadataState: "current",
     metadataBlock: snapshot.number.toString(), metadataBlockHash: snapshot.hash, confirmations: confirmations.toString(),

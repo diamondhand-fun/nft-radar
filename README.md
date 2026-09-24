@@ -64,6 +64,9 @@ The JSON report contains `schema`, `chainId`, `factory`, `token`, `hash`,
 `sourceUrl`, `name`, `symbol`, `imageUrl`, `block`, `confirmedAt`, `checkedAt`,
 `metadataState`, `metadataBlock`, `metadataBlockHash` and `confirmations`. Block numbers are
 decimal strings, so JSON serialization does not lose bigint precision.
+The report also includes the launch `blockHash` and event provenance: `curve`,
+`deployer`, `pairToken`, `launchConfigId` and `graduationThreshold`. The two
+uint256 event values are decimal strings, including values above 2^53.
 
 `metadataState: "current"` means the latest block captured at the start of
 metadata retrieval. All four contract reads use that exact block number and its

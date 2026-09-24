@@ -239,3 +239,18 @@ test("search explicit historical ranges with contiguous bounded windows", async 
   }
   await assert.rejects(inspectLaunch(hash, client, undefined, { toBlock: 75_000_000n }), error => error.code === "invalid_options");
 });
+
+
+test("report factory event provenance with lossless uint256 values", async () => {
+  const { encodeAbiParameters, zeroAddress, getAddress } = await import("viem");
+  const huge = (1n << 255n) + 123n;
+  const log = { ...event(), data: encodeAbiParameters([{ type: "address" }, { type: "uint256" }, { type: "uint256" }], [token, huge, huge + 1n]) };
+  const report = await inspectLaunch(hash, { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), logs: [log] }) });
+  assert.equal(report.curve, getAddress(token));
+  assert.equal(report.deployer, zeroAddress);
+  assert.equal(report.pairToken, getAddress(token));
+  assert.equal(report.launchConfigId, huge.toString());
+  assert.equal(report.graduationThreshold, (huge + 1n).toString());
+  assert.equal(report.blockHash, receipt().blockHash);
+  assert.doesNotThrow(() => JSON.stringify(report));
+});

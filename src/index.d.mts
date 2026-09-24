@@ -18,6 +18,12 @@ export type LaunchReport = {
   factory: Address;
   token: Address;
   hash: Hash;
+  curve: Address;
+  deployer: Address;
+  pairToken: Address;
+  launchConfigId: string;
+  graduationThreshold: string;
+  blockHash: Hash;
   sourceUrl: string;
   name: string;
   symbol: string;
