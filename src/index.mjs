@@ -82,6 +82,8 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     throw new RadarError("The launch block changed. Retry once the chain settles.", "launch_reorg");
   if (!isHash(checkedSnapshot.hash) || checkedSnapshot.number !== snapshot.number || checkedSnapshot.hash.toLowerCase() !== snapshot.hash.toLowerCase())
     throw new RadarError("The metadata block changed. Retry once the chain settles.", "metadata_reorg");
+  if (typeof block.timestamp !== "bigint" || block.timestamp < 0n || block.timestamp > 8_640_000_000_000n)
+    throw new RadarError("The RPC returned an invalid block timestamp.", "invalid_block");
   const references = typeof description === "string" ? description.match(/^Source NFT: (.+)$/gm) ?? [] : [];
   const sourceUrl = references.at(-1)?.slice("Source NFT: ".length) ?? "";
   const source = /^https:\/\/zecbit\.net\/item\/[a-z0-9][a-z0-9_-]{0,127}\/[1-9][0-9]{0,77}$/.test(sourceUrl);

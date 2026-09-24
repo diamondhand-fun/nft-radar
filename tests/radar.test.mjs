@@ -133,3 +133,13 @@ test("discard removed logs and reject event identities outside the receipt", asy
   }
   assert.equal((await inspectLaunch(hash, withLogs([null, {}, event()]))).hash, hash);
 });
+
+
+test("reject malformed block timestamps before JSON serialization", async () => {
+  const client = fixtureClient();
+  for (const timestamp of [undefined, "123", -1n, 8_640_000_000_001n]) {
+    await assert.rejects(inspectLaunch(hash, { ...client, getBlock: async input => ({ ...await client.getBlock(input), timestamp }) }), error => error.code === "invalid_block");
+  }
+  const result = await inspectLaunch(hash, { ...client, getBlock: async input => ({ ...await client.getBlock(input), timestamp: 0n }) });
+  assert.equal(result.confirmedAt, "1970-01-01T00:00:00.000Z");
+});
