@@ -263,3 +263,15 @@ test("reject conflicting duplicate launches instead of picking the last payload"
     await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), logs }) }), error => error.code === "invalid_receipt");
   }
 });
+
+
+test("parse source lines across platforms and reject hidden empty references", async () => {
+  const client = fixtureClient();
+  const withDescription = description => ({ ...client, readContract: async input => input.functionName === "description" ? description : client.readContract(input) });
+  for (const newline of ["\n", "\r\n", "\r"]) {
+    const report = await inspectLaunch(hash, withDescription(`About this token${newline}${metadata.description}  ${newline}Other text`));
+    assert.equal(report.sourceUrl, "https://zecbit.net/item/synthetic-fixture/1");
+    await assert.rejects(inspectLaunch(hash, withDescription(metadata.description + newline + "Source NFT:   ")), error => error.code === "ambiguous_source");
+  }
+  await assert.rejects(inspectLaunch(hash, withDescription("Source NFT:")), error => error.code === "invalid_metadata");
+});
