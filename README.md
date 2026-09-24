@@ -90,3 +90,7 @@ network. See [validation notes](docs/validation.md) for live checks.
 
 Maintained by [Diamond Hand](https://github.com/diamondhand-fun).
 The package is marked private to prevent accidental npm publication; the repository is public.
+
+Validation failures are `RadarError` instances with a stable `code` (for example
+`wrong_chain`, `invalid_receipt`, `ambiguous_launch`, `metadata_reorg`). Applications
+can branch on the code instead of parsing human-readable messages.

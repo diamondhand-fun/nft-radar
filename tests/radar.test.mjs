@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { spawnSync } from "node:child_process";
-import { inspectLaunch, factory } from "../src/index.mjs";
+import { inspectLaunch, factory, RadarError } from "../src/index.mjs";
 import { token, hash, metadata, event, receipt, fixtureClient } from "../examples/fixture.mjs";
 
 test("inspect a transaction and token without a wallet", async () => {
@@ -106,4 +106,11 @@ test("pin metadata to one block and detect reorganizations during reads", async 
     ...(input.blockNumber === 80_000_000n ? { hash: "0x" + "cc".repeat(32) } : {}),
   }) };
   await assert.rejects(inspectLaunch(hash, reorg), /metadata block changed/);
+});
+
+
+test("expose stable error codes for application error handling", async () => {
+  await assert.rejects(inspectLaunch("bad", fixtureClient()), error => error instanceof RadarError && error.code === "invalid_input");
+  await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getChainId: async () => 1 }), error => error.code === "wrong_chain");
+  await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), status: "reverted" }) }), error => error.code === "launch_reverted");
 });
