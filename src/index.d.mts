@@ -7,7 +7,7 @@ export type RadarErrorCode = "inspection_failed" | "invalid_input" | "invalid_se
   | "invalid_options" | "wrong_chain" | "token_mismatch" | "launch_not_found"
   | "invalid_receipt" | "launch_reverted" | "ambiguous_launch" | "invalid_metadata_block"
   | "launch_reorg" | "metadata_reorg" | "invalid_block" | "ambiguous_source"
-  | "invalid_metadata" | "insufficient_confirmations";
+  | "invalid_metadata" | "insufficient_confirmations" | "output_error";
 export class RadarError extends Error {
   readonly code: RadarErrorCode;
   constructor(message: string, code?: RadarErrorCode);

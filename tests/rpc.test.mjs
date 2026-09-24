@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createServer } from "node:http";
 import { once } from "node:events";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { encodeAbiParameters } from "viem";
 import { event, token, hash, blockHash, metadata } from "../examples/fixture.mjs";
@@ -65,5 +68,34 @@ test("CLI crosses the real HTTP/JSON-RPC and ABI boundary", async () => {
     assert.equal(failedCode, 1);
     assert.equal(JSON.parse(failure).error.code, "rpc_error");
     assert(!failure.includes("provider-secret"));
+    const directory = await mkdtemp(join(tmpdir(), "radar-output-"));
+    const output = join(directory, "launch.json");
+    const save = async (destination, suffix = "") => {
+      const saving = spawn(process.execPath, [new URL("../src/cli.mjs", import.meta.url).pathname, "--json-errors", "--output", destination, hash], {
+        env: { ...process.env, RADAR_RPC_URL: `http://127.0.0.1:${server.address().port}${suffix}` },
+      });
+      let stdout = "", stderr = "";
+      saving.stdout.on("data", chunk => { stdout += chunk; });
+      saving.stderr.on("data", chunk => { stderr += chunk; });
+      const [code] = await once(saving, "close");
+      return { code, stdout, stderr };
+    };
+    try {
+      const saved = await save(output);
+      assert.equal(saved.code, 0, saved.stderr);
+      assert.equal(saved.stdout, "");
+      const bytes = await readFile(output, "utf8");
+      assert.equal(JSON.parse(bytes).hash, hash);
+      const duplicate = await save(output);
+      assert.equal(duplicate.code, 1);
+      assert.equal(JSON.parse(duplicate.stderr).error.code, "output_error");
+      assert.equal(await readFile(output, "utf8"), bytes);
+      const missing = await save(join(directory, "missing", "file.json"));
+      assert.equal(JSON.parse(missing.stderr).error.code, "output_error");
+      const rejected = await save(join(directory, "failed.json"), "/provider-secret");
+      assert.equal(JSON.parse(rejected.stderr).error.code, "rpc_error");
+      assert.deepEqual(await readdir(directory), ["launch.json"]);
+    } finally { await rm(directory, { recursive: true, force: true }); }
+
   } finally { server.closeAllConnections(); server.close(); }
 });

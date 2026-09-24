@@ -14,3 +14,11 @@ report.then(result => {
 inspectLaunch("input", client, "not-an-address");
 // @ts-expect-error Confirmation counts are numeric.
 inspectLaunch("input", client, undefined, { minConfirmations: "12" });
+
+inspectLaunch("input", client, undefined, { fromBlock: 71000000n, toBlock: 72000000n, blockTag: "finalized" }).then(result => {
+  const deployer: `0x${string}` = result.deployer;
+  const threshold: string = result.graduationThreshold;
+  const tag: "latest" | "safe" | "finalized" = result.metadataBlockTag;
+});
+// @ts-expect-error Pending state cannot verify a confirmed launch.
+inspectLaunch("input", client, undefined, { blockTag: "pending" });

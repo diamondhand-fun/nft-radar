@@ -131,3 +131,8 @@ as well as the runtime checks. TypeScript is a development dependency only.
 Descriptions are limited to 65,536 characters and artwork URLs to 2,048.
 Artwork URLs must already be HTTPS URLs without whitespace, control characters
 or backslashes; encode spaces in paths as `%20`.
+
+Save a report with `--output launch.json`. The CLI publishes the complete JSON
+file atomically with permissions `0600` and refuses to overwrite an existing
+file. The parent directory must exist. With this option, stdout stays empty;
+save failures use `output_error` and leave existing reports intact.
