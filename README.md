@@ -103,3 +103,8 @@ Require a confirmation depth with
 `inspectLaunch(hash, client, selectedToken, { minConfirmations: 12 })`.
 The default is one inclusion. `confirmations` is a decimal string observed at
 inspection time; confirmation depth does not guarantee permanent finality.
+
+RPC responses are limited to 2 MB and each complete transfer, including the
+response body, has a 12-second deadline. Use
+`radarClient(url, { signal, timeoutMs: 5000 })` for cancellation or a tighter
+deadline. Timeouts must be 1–120,000 ms. Failed requests are not retried.

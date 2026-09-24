@@ -23,8 +23,17 @@ export class RadarError extends Error {
 
 const isHash = value => typeof value === "string" && /^0x[0-9a-f]{64}$/i.test(value);
 
-export function radarClient(rpcUrl) {
-  return createPublicClient({ chain, transport: http(rpcUrl, { timeout: 12_000, retryCount: 0 }) });
+export function radarClient(rpcUrl, { signal, timeoutMs = 12_000 } = {}) {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000) throw new RadarError("RPC timeout must be between 1 and 120000 milliseconds.", "invalid_options");
+  let url;
+  try { url = new URL(rpcUrl ?? chain.rpcUrls.default.http[0]); } catch { throw new RadarError("Invalid RPC URL.", "invalid_options"); }
+  if (!["https:", "http:"].includes(url.protocol)) throw new RadarError("RPC URL must use HTTP or HTTPS.", "invalid_options");
+  return createPublicClient({ chain, transport: http(url.href, {
+    timeout: timeoutMs, retryCount: 0, maxResponseBodySize: 2_000_000,
+    fetchFn: (input, init) => fetch(input, { ...init,
+      signal: AbortSignal.any([init?.signal, signal, AbortSignal.timeout(timeoutMs)].filter(Boolean)),
+    }),
+  }) });
 }
 
 export async function inspectLaunch(input, client = radarClient(), selectedToken, { minConfirmations = 1 } = {}) {
