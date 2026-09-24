@@ -1,13 +1,14 @@
 import { parseArgs } from "node:util";
 import { inspectLaunch, radarClient, RadarError } from "./index.mjs";
 
-const usage = "Usage: npm run --silent inspect -- [--confirmations N] [--timeout MS] [--json-errors] <token-or-tx-hash> [selected-token]";
+const usage = "Usage: npm run --silent inspect -- [--confirmations N] [--timeout MS] [--from-block N] [--to-block N] [--json-errors] <token-or-tx-hash> [selected-token]";
 const jsonErrors = process.argv.includes("--json-errors");
 try {
   let args;
   try {
     args = parseArgs({ allowPositionals: true, options: {
       help: { type: "boolean", short: "h" }, "json-errors": { type: "boolean" },
+      "from-block": { type: "string" }, "to-block": { type: "string" },
       confirmations: { type: "string", default: "1" }, timeout: { type: "string", default: "12000" },
     } });
   } catch { throw new RadarError("Invalid arguments. Use --help.", "invalid_input"); }
@@ -16,8 +17,15 @@ try {
   else {
     if (positionals.length < 1 || positionals.length > 2) throw new RadarError(usage, "invalid_input");
     if (![values.confirmations, values.timeout].every(value => /^[1-9][0-9]*$/.test(value))) throw new RadarError("Confirmations and timeout must be positive integers.", "invalid_options");
+    const bounds = {};
+    for (const [flag, key] of [["from-block", "fromBlock"], ["to-block", "toBlock"]]) {
+      if (values[flag] !== undefined) {
+        if (!/^[0-9]{1,30}$/.test(values[flag])) throw new RadarError("Search bounds must be decimal block numbers.", "invalid_options");
+        bounds[key] = BigInt(values[flag]);
+      }
+    }
     const client = radarClient(process.env.RADAR_RPC_URL, { timeoutMs: Number(values.timeout) });
-    const report = await inspectLaunch(positionals[0], client, positionals[1], { minConfirmations: Number(values.confirmations) });
+    const report = await inspectLaunch(positionals[0], client, positionals[1], { minConfirmations: Number(values.confirmations), ...bounds });
     console.log(JSON.stringify(report, null, 2));
   }
 } catch (error) {

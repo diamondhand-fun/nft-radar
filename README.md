@@ -51,7 +51,11 @@ The deployment preset comes from Diamond Hand: chain ID **4663**, factory
 
 Token lookup scans at most ten successful windows of up to 800,000 blocks,
 never below block 70,000,000. When a provider rejects a log range, the window
-is halved without skipping blocks. Each lookup is capped at 40 RPC attempts. Supply the transaction hash for older launches. Transaction lookup
+is halved without skipping blocks. Each lookup is capped at 40 RPC attempts. For older launches, supply the transaction hash or set explicit history bounds
+with `{ fromBlock: 71000000n, toBlock: 72000000n }`. The CLI equivalents are
+`--from-block 71000000 --to-block 72000000`; these apply only to token lookup
+and retain the same request caps. Narrow the range further if your provider
+limits scan windows. Transaction lookup
 uses the receipt directly; it does not scan the chain.
 
 ## Report

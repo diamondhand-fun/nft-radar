@@ -227,3 +227,15 @@ test("recognize wrapped provider range errors without looping on cause cycles", 
   await assert.rejects(inspectLaunch(token, { ...client, getLogs: async () => { calls++; throw error; } }), value => value === error);
   assert.equal(calls, 1);
 });
+
+
+test("search explicit historical ranges with contiguous bounded windows", async () => {
+  const ranges = [];
+  const client = { ...fixtureClient(), getLogs: async input => { ranges.push(input); return []; } };
+  await assert.rejects(inspectLaunch(token, client, undefined, { fromBlock: 71_000_000n, toBlock: 72_000_000n }), error => error.code === "launch_not_found");
+  assert.deepEqual(ranges.map(({ fromBlock, toBlock }) => [fromBlock, toBlock]), [[71_200_001n, 72_000_000n], [71_000_000n, 71_200_000n]]);
+  for (const options of [{ fromBlock: 1n }, { toBlock: 90_000_000n }, { fromBlock: 75_000_000n, toBlock: 74_000_000n }, { toBlock: 75000000 }]) {
+    await assert.rejects(inspectLaunch(token, client, undefined, options), error => error.code === "invalid_options");
+  }
+  await assert.rejects(inspectLaunch(hash, client, undefined, { toBlock: 75_000_000n }), error => error.code === "invalid_options");
+});

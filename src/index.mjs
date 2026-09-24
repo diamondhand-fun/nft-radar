@@ -36,10 +36,12 @@ export function radarClient(rpcUrl, { signal, timeoutMs = 12_000 } = {}) {
   }) });
 }
 
-export async function inspectLaunch(input, client = radarClient(), selectedToken, { minConfirmations = 1 } = {}) {
+export async function inspectLaunch(input, client = radarClient(), selectedToken, { minConfirmations = 1, fromBlock, toBlock } = {}) {
   if (!Number.isSafeInteger(minConfirmations) || minConfirmations < 1) throw new RadarError("Minimum confirmations must be a positive integer.", "invalid_options");
   const value = typeof input === "string" ? input.trim() : "";
   if (!isAddress(value) && !isHash(value)) throw new RadarError("Use a token address or launch transaction hash.", "invalid_input");
+  if ([fromBlock, toBlock].some(height => height !== undefined && (typeof height !== "bigint" || height < 70_000_000n)) || fromBlock !== undefined && toBlock !== undefined && fromBlock > toBlock || (fromBlock !== undefined || toBlock !== undefined) && !isAddress(value))
+    throw new RadarError("Search bounds require a token address and an ordered range at or above block 70000000.", "invalid_options");
   if (selectedToken !== undefined && (typeof selectedToken !== "string" || !isAddress(selectedToken))) throw new RadarError("Invalid selected token.", "invalid_selection");
   if (await client.getChainId() !== chain.id) throw new RadarError("The RPC returned a different chain. Verification stopped.", "wrong_chain");
   let token, hash;
@@ -48,10 +50,13 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     if (selectedToken && selectedToken.toLowerCase() !== token.toLowerCase()) throw new RadarError("The selected token does not match the input.", "token_mismatch");
     let end = await client.getBlockNumber();
     if (typeof end !== "bigint" || end < 0n) throw new RadarError("The RPC returned an invalid chain height.", "invalid_block");
+    if (toBlock !== undefined && toBlock > end || fromBlock !== undefined && fromBlock > end) throw new RadarError("Search bounds exceed the current chain height.", "invalid_options");
+    end = toBlock ?? end;
+    const floor = fromBlock ?? 70_000_000n;
     // ponytail: at most ten successful windows and forty RPC attempts per lookup.
     let span = 800_000n, windows = 0, attempts = 0;
-    while (windows < 10 && attempts < 40 && end >= 70_000_000n) {
-      const start = end - span + 1n > 70_000_000n ? end - span + 1n : 70_000_000n;
+    while (windows < 10 && attempts < 40 && end >= floor) {
+      const start = end - span + 1n > floor ? end - span + 1n : floor;
       let logs;
       attempts++;
       try {
