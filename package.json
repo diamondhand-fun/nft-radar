@@ -1,0 +1,15 @@
+{
+  "name": "@diamondhand-fun/nft-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Read-only NFT-linked launch inspection extracted from Diamond Hand Radar",
+  "type": "module",
+  "exports": "./src/index.mjs",
+  "scripts": {
+    "test": "node --test",
+    "demo": "node examples/demo.mjs",
+    "inspect": "node src/cli.mjs"
+  },
+  "engines": { "node": ">=22" },
+  "dependencies": { "viem": "2.56.8" }
+}
