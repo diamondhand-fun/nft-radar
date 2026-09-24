@@ -8,9 +8,11 @@ export type RadarErrorCode = "inspection_failed" | "invalid_input" | "invalid_se
   | "invalid_receipt" | "launch_reverted" | "ambiguous_launch" | "invalid_metadata_block"
   | "launch_reorg" | "metadata_reorg" | "invalid_block" | "ambiguous_source"
   | "invalid_metadata" | "insufficient_confirmations" | "output_error";
+export type ScanProgress = { fromBlock: string; toBlock: string; nextToBlock: string | null; windows: number; attempts: number };
 export class RadarError extends Error {
   readonly code: RadarErrorCode;
-  constructor(message: string, code?: RadarErrorCode);
+  readonly details?: ScanProgress;
+  constructor(message: string, code?: RadarErrorCode, details?: ScanProgress);
 }
 export type LaunchReport = {
   schema: "diamond-hand.launch-check.v1";

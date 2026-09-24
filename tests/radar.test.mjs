@@ -331,3 +331,17 @@ test("bind a discovered receipt to the actual log search window", async () => {
   await assert.rejects(inspectLaunch(token, client, undefined, { fromBlock: 71_000_000n, toBlock: 72_000_000n }), error => error.code === "invalid_receipt");
   assert.equal((await inspectLaunch(token, client, undefined, { fromBlock: 79_999_999n, toBlock: 79_999_999n })).block, "79999999");
 });
+
+
+test("expose a resumable scan cursor and distinguish exhausted history", async () => {
+  const client = { ...fixtureClient(), getLogs: async () => [] };
+  await assert.rejects(inspectLaunch(token, client), error => {
+    assert.deepEqual(error.details, { fromBlock: "70000000", toBlock: "80000000", nextToBlock: "72000000", windows: 10, attempts: 10 });
+    return error.code === "launch_not_found";
+  });
+  await assert.rejects(inspectLaunch(token, client, undefined, { toBlock: 72_000_000n }), error => {
+    assert.equal(error.details.nextToBlock, null);
+    assert.equal(error.details.windows, 3);
+    return error.code === "launch_not_found";
+  });
+});

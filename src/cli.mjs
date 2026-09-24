@@ -51,6 +51,6 @@ try {
 } catch (error) {
   const code = error instanceof RadarError ? error.code : "rpc_error";
   const message = error instanceof RadarError ? error.message : "RPC inspection failed. Check your provider and input.";
-  console.error(jsonErrors ? JSON.stringify({ error: { code, message } }) : message);
+  console.error(jsonErrors ? JSON.stringify({ error: { code, message, ...(error instanceof RadarError && error.details ? { details: error.details } : {}) } }) : message);
   process.exitCode = 1;
 }

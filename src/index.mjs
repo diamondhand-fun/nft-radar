@@ -14,10 +14,11 @@ const metadataAbi = parseAbi([
   "function description() view returns (string)", "function logo() view returns (string)",
 ]);
 export class RadarError extends Error {
-  constructor(message, code = "inspection_failed") {
+  constructor(message, code = "inspection_failed", details) {
     super(message);
     this.name = "RadarError";
     this.code = code;
+    if (details !== undefined) this.details = details;
   }
 }
 
@@ -54,6 +55,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     if (toBlock !== undefined && toBlock > end || fromBlock !== undefined && fromBlock > end) throw new RadarError("Search bounds exceed the current chain height.", "invalid_options");
     end = toBlock ?? end;
     const floor = fromBlock ?? 70_000_000n;
+    const scanEnd = end;
     // ponytail: at most ten successful windows and forty RPC attempts per lookup.
     let span = 800_000n, windows = 0, attempts = 0;
     while (windows < 10 && attempts < 40 && end >= floor) {
@@ -77,7 +79,9 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
       if (candidate) { hash = candidate.transactionHash; lookupRange = { fromBlock: start, toBlock: end }; break; }
       end = start - 1n;
     }
-    if (!isHash(hash)) throw new RadarError("No launch found in the recent history range. Use its transaction hash.", "launch_not_found");
+    if (!isHash(hash)) throw new RadarError("No launch found in the recent history range. Use its transaction hash or continue from nextToBlock.", "launch_not_found", {
+      fromBlock: floor.toString(), toBlock: scanEnd.toString(), nextToBlock: end >= floor ? end.toString() : null, windows, attempts,
+    });
   } else hash = value;
 
   hash = hash.toLowerCase();
