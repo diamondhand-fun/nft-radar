@@ -210,3 +210,20 @@ test("reject malformed RPC responses with stable codes instead of TypeErrors", a
     await assert.rejects(inspectLaunch(hash, { ...client, getBlock: async input => input.blockNumber === height ? null : client.getBlock(input) }), error => error.code === code);
   }
 });
+
+
+test("recognize wrapped provider range errors without looping on cause cycles", async () => {
+  let calls = 0;
+  const client = { ...fixtureClient(), getLogs: async input => {
+    calls++;
+    if (input.toBlock - input.fromBlock > 100_000n) throw new Error("RPC request failed", { cause: new Error("block range too large") });
+    return [{ transactionHash: hash }];
+  } };
+  assert.equal((await inspectLaunch(token, client)).hash, hash);
+  assert.equal(calls, 4);
+  const error = new Error("connection refused");
+  error.cause = error;
+  calls = 0;
+  await assert.rejects(inspectLaunch(token, { ...client, getLogs: async () => { calls++; throw error; } }), value => value === error);
+  assert.equal(calls, 1);
+});

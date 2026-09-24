@@ -57,7 +57,10 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
       try {
         logs = await client.getLogs({ address: factory, event: launchEvent, args: { token }, fromBlock: start, toBlock: end, strict: true });
       } catch (error) {
-        const rangeLimit = /block range|range.*(?:large|limit)|query.*(?:exceed|limit)|too many (?:results|logs)|logs.*limit|response size/i.test(error.details || error.message || "");
+        let rangeLimit = false, cause = error;
+        for (let depth = 0; cause && depth < 8; depth++, cause = cause.cause) {
+          if (/block range|range.*(?:large|limit)|query.*(?:exceed|limit)|too many (?:results|logs)|logs.*limit|response size/i.test(`${cause.details ?? ""} ${cause.message ?? ""}`)) rangeLimit = true;
+        }
         if (!rangeLimit || span === 1n) throw error;
         span = span / 2n || 1n;
         continue;
