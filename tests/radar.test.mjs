@@ -143,3 +143,12 @@ test("reject malformed block timestamps before JSON serialization", async () => 
   const result = await inspectLaunch(hash, { ...client, getBlock: async input => ({ ...await client.getBlock(input), timestamp: 0n }) });
   assert.equal(result.confirmedAt, "1970-01-01T00:00:00.000Z");
 });
+
+
+test("reject conflicting NFT references while allowing repeated identical sources", async () => {
+  const client = fixtureClient();
+  const withDescription = description => ({ ...client, readContract: async input => input.functionName === "description" ? description : client.readContract(input) });
+  await assert.rejects(inspectLaunch(hash, withDescription(metadata.description + "\nSource NFT: https://zecbit.net/item/other/2")), error => error.code === "ambiguous_source");
+  const report = await inspectLaunch(hash, withDescription(metadata.description + "\r\n" + metadata.description));
+  assert.equal(report.sourceUrl, "https://zecbit.net/item/synthetic-fixture/1");
+});

@@ -35,10 +35,11 @@ number. After the reads, both the metadata block and the launch block are
 checked again against their recorded hashes. A changed block rejects the report.
 This needs recent state access, not an archive of the original launch state.
 
-The final line matching `Source NFT: ...` is used, preserving the application
-convention. It must be exactly `https://zecbit.net/item/{collection}/{positive-id}`:
-no query string, fragment, credentials, custom port or trailing slash. Multiple
-references are not an ownership chain; only the final reference is reported.
+Every line matching `Source NFT: ...` is examined. Repeated identical
+references are accepted; conflicting sources reject the report with
+`ambiguous_source`. A reference must be exactly
+`https://zecbit.net/item/{collection}/{positive-id}`: no query, fragment,
+credentials, custom port or trailing slash.
 
 Artwork must be an HTTPS URL without embedded credentials or a nondefault port.
 The reader does not fetch or verify the image. Names and metadata are untrusted
