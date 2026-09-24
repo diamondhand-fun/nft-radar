@@ -275,3 +275,21 @@ test("parse source lines across platforms and reject hidden empty references", a
   }
   await assert.rejects(inspectLaunch(hash, withDescription("Source NFT:")), error => error.code === "invalid_metadata");
 });
+
+
+test("bound metadata and reject artwork URLs normalized from control characters", async () => {
+  const client = fixtureClient();
+  for (const patch of [
+    { description: "x".repeat(65_537) + metadata.description },
+    { logo: "https://example.com/" + "x".repeat(2048) },
+    { logo: "https://exa\nmple.com/image.png" },
+    { logo: "https://example.com/a b.png" },
+    { logo: "https://example.com\\image.png" },
+    { logo: { toString: () => metadata.logo } },
+  ]) {
+    const values = { ...metadata, ...patch };
+    await assert.rejects(inspectLaunch(hash, { ...client, readContract: async ({ functionName }) => values[functionName] }), error => error.code === "invalid_metadata");
+  }
+  const report = await inspectLaunch(hash, { ...client, readContract: async input => input.functionName === "logo" ? "https://example.com/a%20b.png" : client.readContract(input) });
+  assert.equal(report.imageUrl, "https://example.com/a%20b.png");
+});

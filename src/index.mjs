@@ -123,6 +123,8 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     throw new RadarError("The metadata block changed. Retry once the chain settles.", "metadata_reorg");
   if (typeof block.timestamp !== "bigint" || block.timestamp < 0n || block.timestamp > 8_640_000_000_000n)
     throw new RadarError("The RPC returned an invalid block timestamp.", "invalid_block");
+  if (typeof description !== "string" || description.length > 65_536 || typeof logo !== "string" || logo.length > 2048 || /[\x00-\x20\x7f\\]/.test(logo))
+    throw new RadarError("This token does not contain supported Zecbit metadata.", "invalid_metadata");
   const references = typeof description === "string" ? description.split(/\r\n|[\r\n]/).filter(line => line.startsWith("Source NFT:")) : [];
   const sources = new Set(references.map(reference => reference.slice("Source NFT:".length).trim()));
   if (sources.size > 1) throw new RadarError("Token metadata contains conflicting NFT source references.", "ambiguous_source");

@@ -124,3 +124,7 @@ URLs and messages are redacted from failures. `--help` lists the available flags
 TypeScript declarations cover the client, options, stable error codes and
 report schema. `npm test` checks public package imports and expected type errors
 as well as the runtime checks. TypeScript is a development dependency only.
+
+Descriptions are limited to 65,536 characters and artwork URLs to 2,048.
+Artwork URLs must already be HTTPS URLs without whitespace, control characters
+or backslashes; encode spaces in paths as `%20`.
