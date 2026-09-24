@@ -49,8 +49,9 @@ The deployment preset comes from Diamond Hand: chain ID **4663**, factory
 | NFT reference | Missing or noncanonical Zecbit item URL |
 | Metadata | Invalid name, ticker or HTTPS artwork reference |
 
-Token lookup scans at most ten windows of 800,000 blocks, never below block
-70,000,000. Supply the transaction hash for older launches. Transaction lookup
+Token lookup scans at most ten successful windows of up to 800,000 blocks,
+never below block 70,000,000. When a provider rejects a log range, the window
+is halved without skipping blocks. Each lookup is capped at 40 RPC attempts. Supply the transaction hash for older launches. Transaction lookup
 uses the receipt directly; it does not scan the chain.
 
 ## Report

@@ -16,7 +16,8 @@ flowchart LR
 ## Receipt selection
 
 An address triggers a backward log search, filtered by factory and indexed token.
-Windows are contiguous, bounded and include both endpoints. The first matching
+Windows are contiguous, bounded and include both endpoints. Provider range-limit
+errors shrink the window; rate limits and other failures propagate immediately. The first matching
 transaction becomes the candidate; its receipt must independently contain the
 matching factory event. A supplied transaction hash skips log scanning.
 

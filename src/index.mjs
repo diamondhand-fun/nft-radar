@@ -38,11 +38,23 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     token = value;
     if (selectedToken && selectedToken.toLowerCase() !== token.toLowerCase()) throw new RadarError("The selected token does not match the input.", "token_mismatch");
     let end = await client.getBlockNumber();
-    // ponytail: ten 800k-block windows; use a transaction hash for older launches.
-    for (let i = 0; i < 10 && end >= 70_000_000n; i++) {
-      const start = end - 799_999n > 70_000_000n ? end - 799_999n : 70_000_000n;
-      const logs = await client.getLogs({ address: factory, event: launchEvent, args: { token }, fromBlock: start, toBlock: end, strict: true });
-      if (logs.length) { hash = logs[0].transactionHash; break; }
+    // ponytail: at most ten successful windows and forty RPC attempts per lookup.
+    let span = 800_000n, windows = 0, attempts = 0;
+    while (windows < 10 && attempts < 40 && end >= 70_000_000n) {
+      const start = end - span + 1n > 70_000_000n ? end - span + 1n : 70_000_000n;
+      let logs;
+      attempts++;
+      try {
+        logs = await client.getLogs({ address: factory, event: launchEvent, args: { token }, fromBlock: start, toBlock: end, strict: true });
+      } catch (error) {
+        const rangeLimit = /block range|range.*(?:large|limit)|query.*(?:exceed|limit)|too many (?:results|logs)|logs.*limit|response size/i.test(error.details || error.message || "");
+        if (!rangeLimit || span === 1n) throw error;
+        span = span / 2n || 1n;
+        continue;
+      }
+      windows++;
+      const candidate = logs.find(log => !log.removed && isHash(log.transactionHash));
+      if (candidate) { hash = candidate.transactionHash; break; }
       end = start - 1n;
     }
     if (!isHash(hash)) throw new RadarError("No launch found in the recent history range. Use its transaction hash.", "launch_not_found");

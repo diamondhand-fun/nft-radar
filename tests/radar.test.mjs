@@ -163,3 +163,21 @@ test("enforce confirmation depth before fetching metadata", async () => {
     await assert.rejects(inspectLaunch(hash, client, undefined, { minConfirmations }), error => error.code === "invalid_options");
   }
 });
+
+
+test("shrink rejected RPC ranges without skipping blocks or retrying outages", async () => {
+  const client = fixtureClient();
+  const calls = [];
+  const report = await inspectLaunch(token, { ...client, getLogs: async input => {
+    calls.push(input);
+    if (input.toBlock - input.fromBlock + 1n > 100_000n) throw Object.assign(new Error("query exceeds limit"), { code: -32000 });
+    return calls.filter(x => x.toBlock - x.fromBlock + 1n <= 100_000n).length === 2 ? [{ transactionHash: hash }] : [];
+  } });
+  assert.equal(report.hash, hash);
+  assert.equal(calls.length, 5);
+  assert.equal(calls[4].toBlock, calls[3].fromBlock - 1n);
+  let count = 0;
+  const outage = new Error("HTTP 429: too many requests");
+  await assert.rejects(inspectLaunch(token, { ...client, getLogs: async () => { count++; throw outage; } }), error => error === outage);
+  assert.equal(count, 1);
+});
