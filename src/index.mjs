@@ -45,7 +45,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     throw new RadarError("Search bounds require a token address and an ordered range at or above block 70000000.", "invalid_options");
   if (selectedToken !== undefined && (typeof selectedToken !== "string" || !isAddress(selectedToken) || selectedToken.toLowerCase() === zeroAddress)) throw new RadarError("Invalid selected token.", "invalid_selection");
   if (await client.getChainId() !== chain.id) throw new RadarError("The RPC returned a different chain. Verification stopped.", "wrong_chain");
-  let token, hash;
+  let token, hash, lookupRange;
   if (isAddress(value)) {
     token = value;
     if (selectedToken && selectedToken.toLowerCase() !== token.toLowerCase()) throw new RadarError("The selected token does not match the input.", "token_mismatch");
@@ -74,7 +74,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
       if (!Array.isArray(logs)) throw new RadarError("The RPC returned an invalid log list.", "invalid_receipt");
       windows++;
       const candidate = logs.find(log => log && !log.removed && isHash(log.transactionHash));
-      if (candidate) { hash = candidate.transactionHash; break; }
+      if (candidate) { hash = candidate.transactionHash; lookupRange = { fromBlock: start, toBlock: end }; break; }
       end = start - 1n;
     }
     if (!isHash(hash)) throw new RadarError("No launch found in the recent history range. Use its transaction hash.", "launch_not_found");
@@ -84,6 +84,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
   const receipt = await client.getTransactionReceipt({ hash });
   if (!Array.isArray(receipt?.logs) || !isHash(receipt.transactionHash) || receipt.transactionHash.toLowerCase() !== hash.toLowerCase() || !isHash(receipt.blockHash) || typeof receipt.blockNumber !== "bigint" || receipt.blockNumber < 0n)
     throw new RadarError("The RPC returned an inconsistent transaction receipt.", "invalid_receipt");
+  if (lookupRange && (receipt.blockNumber < lookupRange.fromBlock || receipt.blockNumber > lookupRange.toBlock)) throw new RadarError("The launch receipt is outside the requested log window.", "invalid_receipt");
   if (receipt.status !== "success") throw new RadarError("This transaction has not confirmed a successful launch.", "launch_reverted");
   const tokens = new Map();
   for (const log of receipt.logs) {

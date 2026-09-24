@@ -166,7 +166,7 @@ test("enforce confirmation depth before fetching metadata", async () => {
 
 
 test("shrink rejected RPC ranges without skipping blocks or retrying outages", async () => {
-  const client = fixtureClient();
+  const client = { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), blockNumber: 79_899_999n, logs: [{ ...event(), blockNumber: 79_899_999n }] }) };
   const calls = [];
   const report = await inspectLaunch(token, { ...client, getLogs: async input => {
     calls.push(input);
@@ -323,4 +323,11 @@ test("require exact launch event ABI framing including topic and data lengths", 
   for (const log of [{ ...event(), data: event().data + "00".repeat(32) }, { ...event(), topics: [...event().topics, hash] }, { ...event(), topics: event().topics.slice(0, 3) }]) {
     await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), logs: [log] }) }), error => error.code === "launch_not_found");
   }
+});
+
+
+test("bind a discovered receipt to the actual log search window", async () => {
+  const client = fixtureClient();
+  await assert.rejects(inspectLaunch(token, client, undefined, { fromBlock: 71_000_000n, toBlock: 72_000_000n }), error => error.code === "invalid_receipt");
+  assert.equal((await inspectLaunch(token, client, undefined, { fromBlock: 79_999_999n, toBlock: 79_999_999n })).block, "79999999");
 });
