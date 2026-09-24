@@ -1,4 +1,4 @@
-import { createPublicClient, decodeEventLog, defineChain, http, isAddress, getAddress, parseAbi, parseAbiItem } from "viem";
+import { createPublicClient, decodeEventLog, defineChain, http, isAddress, getAddress, parseAbi, parseAbiItem, zeroAddress } from "viem";
 
 // Deployment preset extracted from the Diamond Hand application.
 export const chain = defineChain({
@@ -40,10 +40,10 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
   if (!Number.isSafeInteger(minConfirmations) || minConfirmations < 1) throw new RadarError("Minimum confirmations must be a positive integer.", "invalid_options");
   if (!["latest", "safe", "finalized"].includes(blockTag)) throw new RadarError("Metadata block tag must be latest, safe or finalized.", "invalid_options");
   const value = typeof input === "string" ? input.trim() : "";
-  if (!isAddress(value) && !isHash(value)) throw new RadarError("Use a token address or launch transaction hash.", "invalid_input");
+  if (value.toLowerCase() === zeroAddress || !isAddress(value) && !isHash(value)) throw new RadarError("Use a token address or launch transaction hash.", "invalid_input");
   if ([fromBlock, toBlock].some(height => height !== undefined && (typeof height !== "bigint" || height < 70_000_000n)) || fromBlock !== undefined && toBlock !== undefined && fromBlock > toBlock || (fromBlock !== undefined || toBlock !== undefined) && !isAddress(value))
     throw new RadarError("Search bounds require a token address and an ordered range at or above block 70000000.", "invalid_options");
-  if (selectedToken !== undefined && (typeof selectedToken !== "string" || !isAddress(selectedToken))) throw new RadarError("Invalid selected token.", "invalid_selection");
+  if (selectedToken !== undefined && (typeof selectedToken !== "string" || !isAddress(selectedToken) || selectedToken.toLowerCase() === zeroAddress)) throw new RadarError("Invalid selected token.", "invalid_selection");
   if (await client.getChainId() !== chain.id) throw new RadarError("The RPC returned a different chain. Verification stopped.", "wrong_chain");
   let token, hash;
   if (isAddress(value)) {

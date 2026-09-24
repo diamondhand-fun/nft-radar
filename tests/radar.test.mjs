@@ -309,3 +309,11 @@ test("pin metadata to safe or finalized blocks without silently falling back", a
   const unsupported = new Error("unsupported block tag");
   await assert.rejects(inspectLaunch(hash, { ...client, getBlock: async () => { throw unsupported; } }, undefined, { blockTag: "safe" }), error => error === unsupported);
 });
+
+
+test("reject zero token addresses before issuing RPC calls", async () => {
+  const zero = "0x" + "00".repeat(20);
+  const client = { getChainId: () => assert.fail("Invalid input must not use RPC") };
+  await assert.rejects(inspectLaunch(zero, client), error => error.code === "invalid_input");
+  await assert.rejects(inspectLaunch(hash, client, zero), error => error.code === "invalid_selection");
+});
