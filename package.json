@@ -4,12 +4,25 @@
   "private": true,
   "description": "Read-only NFT-linked launch inspection extracted from Diamond Hand Radar",
   "type": "module",
-  "exports": "./src/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.mts",
+      "import": "./src/index.mjs"
+    }
+  },
   "scripts": {
-    "test": "node --test",
+    "test": "node --test && tsc",
     "demo": "node examples/demo.mjs",
     "inspect": "node src/cli.mjs"
   },
-  "engines": { "node": ">=22" },
-  "dependencies": { "viem": "2.56.8" }
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "viem": "2.56.8"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  },
+  "types": "./src/index.d.mts"
 }

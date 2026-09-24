@@ -113,3 +113,7 @@ For automation, the CLI accepts `--confirmations 12`, `--timeout 5000` and
 `--json-errors`. Reports go to stdout; failures go to stderr as
 `{"error":{"code":"...","message":"..."}}` with exit status 1. Upstream RPC
 URLs and messages are redacted from failures. `--help` lists the available flags.
+
+TypeScript declarations cover the client, options, stable error codes and
+report schema. `npm test` checks public package imports and expected type errors
+as well as the runtime checks. TypeScript is a development dependency only.
