@@ -27,7 +27,8 @@ export function radarClient(rpcUrl) {
   return createPublicClient({ chain, transport: http(rpcUrl, { timeout: 12_000, retryCount: 0 }) });
 }
 
-export async function inspectLaunch(input, client = radarClient(), selectedToken) {
+export async function inspectLaunch(input, client = radarClient(), selectedToken, { minConfirmations = 1 } = {}) {
+  if (!Number.isSafeInteger(minConfirmations) || minConfirmations < 1) throw new RadarError("Minimum confirmations must be a positive integer.", "invalid_options");
   const value = typeof input === "string" ? input.trim() : "";
   if (!isAddress(value) && !isHash(value)) throw new RadarError("Use a token address or launch transaction hash.", "invalid_input");
   if (selectedToken !== undefined && (typeof selectedToken !== "string" || !isAddress(selectedToken))) throw new RadarError("Invalid selected token.", "invalid_selection");
@@ -70,6 +71,8 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
   const snapshot = await client.getBlock({ blockTag: "latest" });
   if (!isHash(snapshot.hash) || typeof snapshot.number !== "bigint" || snapshot.number < receipt.blockNumber)
     throw new RadarError("The RPC returned an invalid metadata block.", "invalid_metadata_block");
+  const confirmations = snapshot.number - receipt.blockNumber + 1n;
+  if (confirmations < BigInt(minConfirmations)) throw new RadarError("The launch has not reached the requested confirmation depth.", "insufficient_confirmations");
   // Pin all metadata reads to one recent block; archive state is not required.
   const [name, symbol, description, logo] = await Promise.all(
     ["name", "symbol", "description", "logo"].map(functionName => client.readContract({ address: token, abi: metadataAbi, functionName, blockNumber: snapshot.number })),
@@ -101,6 +104,6 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     token, hash, sourceUrl, name, symbol, imageUrl,
     block: receipt.blockNumber.toString(), confirmedAt: new Date(Number(block.timestamp) * 1000).toISOString(),
     checkedAt: new Date().toISOString(), metadataState: "current",
-    metadataBlock: snapshot.number.toString(), metadataBlockHash: snapshot.hash,
+    metadataBlock: snapshot.number.toString(), metadataBlockHash: snapshot.hash, confirmations: confirmations.toString(),
   };
 }

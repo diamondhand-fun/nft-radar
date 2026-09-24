@@ -152,3 +152,14 @@ test("reject conflicting NFT references while allowing repeated identical source
   const report = await inspectLaunch(hash, withDescription(metadata.description + "\r\n" + metadata.description));
   assert.equal(report.sourceUrl, "https://zecbit.net/item/synthetic-fixture/1");
 });
+
+
+test("enforce confirmation depth before fetching metadata", async () => {
+  const client = fixtureClient();
+  const report = await inspectLaunch(hash, client, undefined, { minConfirmations: 2 });
+  assert.equal(report.confirmations, "2");
+  await assert.rejects(inspectLaunch(hash, { ...client, readContract: () => assert.fail("Too early to read metadata") }, undefined, { minConfirmations: 3 }), error => error.code === "insufficient_confirmations");
+  for (const minConfirmations of [0, -1, 1.5, NaN]) {
+    await assert.rejects(inspectLaunch(hash, client, undefined, { minConfirmations }), error => error.code === "invalid_options");
+  }
+});

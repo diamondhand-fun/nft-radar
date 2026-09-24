@@ -50,7 +50,8 @@ text and must be escaped when displayed in HTML.
 A successful RPC receipt contains a matching launch event, its reported block
 still matches a separately fetched block, and current token metadata references
 a syntactically supported NFT source. The chain can reorganize after the check;
-no confirmation-depth or finality policy is enforced. An untrusted RPC can lie.
+the caller can enforce a minimum confirmation depth, but this is not a
+finality guarantee. An untrusted RPC can lie.
 
 No NFT ownership, NFT authenticity, shielded Zcash data, economic safety or
 permission from the original creator is established by these checks.

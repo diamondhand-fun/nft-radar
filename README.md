@@ -57,7 +57,7 @@ uses the receipt directly; it does not scan the chain.
 
 The JSON report contains `schema`, `chainId`, `factory`, `token`, `hash`,
 `sourceUrl`, `name`, `symbol`, `imageUrl`, `block`, `confirmedAt`, `checkedAt`,
-`metadataState`, `metadataBlock` and `metadataBlockHash`. Block numbers are
+`metadataState`, `metadataBlock`, `metadataBlockHash` and `confirmations`. Block numbers are
 decimal strings, so JSON serialization does not lose bigint precision.
 
 `metadataState: "current"` means the latest block captured at the start of
@@ -97,3 +97,8 @@ can branch on the code instead of parsing human-readable messages.
 
 Report token addresses use EIP-55 checksum casing; transaction hashes are
 lowercase, so token and transaction lookups produce the same identity.
+
+Require a confirmation depth with
+`inspectLaunch(hash, client, selectedToken, { minConfirmations: 12 })`.
+The default is one inclusion. `confirmations` is a decimal string observed at
+inspection time; confirmation depth does not guarantee permanent finality.
