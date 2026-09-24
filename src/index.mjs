@@ -89,10 +89,14 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     if (log?.removed || typeof log?.address !== "string" || log.address.toLowerCase() !== factory.toLowerCase()) continue;
     if (!isHash(log.transactionHash) || log.transactionHash.toLowerCase() !== hash || !isHash(log.blockHash) || log.blockHash.toLowerCase() !== receipt.blockHash.toLowerCase() || log.blockNumber !== receipt.blockNumber)
       throw new RadarError("The RPC returned a log from a different receipt or block.", "invalid_receipt");
-    try {
-      const event = decodeEventLog({ abi: [launchEvent], data: log.data, topics: log.topics });
-      tokens.set(event.args.token.toLowerCase(), event.args);
-    } catch { /* Ignore unrelated or malformed logs. */ }
+    let event;
+    try { event = decodeEventLog({ abi: [launchEvent], data: log.data, topics: log.topics }); }
+    catch { continue; } // Ignore unrelated or malformed logs.
+    const key = event.args.token.toLowerCase();
+    const previous = tokens.get(key);
+    if (previous && Object.keys(previous).some(field => previous[field].toString().toLowerCase() !== event.args[field].toString().toLowerCase()))
+      throw new RadarError("The receipt contains conflicting launch events for one token.", "invalid_receipt");
+    tokens.set(key, event.args);
   }
   const expected = token || selectedToken;
   if (expected && !tokens.has(expected.toLowerCase())) throw new RadarError("No matching token launch was found in this transaction.", "token_mismatch");

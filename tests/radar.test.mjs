@@ -254,3 +254,12 @@ test("report factory event provenance with lossless uint256 values", async () =>
   assert.equal(report.blockHash, receipt().blockHash);
   assert.doesNotThrow(() => JSON.stringify(report));
 });
+
+
+test("reject conflicting duplicate launches instead of picking the last payload", async () => {
+  const { encodeAbiParameters, zeroAddress } = await import("viem");
+  const altered = { ...event(), data: encodeAbiParameters([{ type: "address" }, { type: "uint256" }, { type: "uint256" }], [zeroAddress, 0n, 99n]) };
+  for (const logs of [[event(), altered], [altered, event()]]) {
+    await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), logs }) }), error => error.code === "invalid_receipt");
+  }
+});
