@@ -94,3 +94,6 @@ The package is marked private to prevent accidental npm publication; the reposit
 Validation failures are `RadarError` instances with a stable `code` (for example
 `wrong_chain`, `invalid_receipt`, `ambiguous_launch`, `metadata_reorg`). Applications
 can branch on the code instead of parsing human-readable messages.
+
+Report token addresses use EIP-55 checksum casing; transaction hashes are
+lowercase, so token and transaction lookups produce the same identity.

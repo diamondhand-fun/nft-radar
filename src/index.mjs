@@ -1,4 +1,4 @@
-import { createPublicClient, decodeEventLog, defineChain, http, isAddress, parseAbi, parseAbiItem } from "viem";
+import { createPublicClient, decodeEventLog, defineChain, http, isAddress, getAddress, parseAbi, parseAbiItem } from "viem";
 
 // Deployment preset extracted from the Diamond Hand application.
 export const chain = defineChain({
@@ -47,6 +47,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     if (!isHash(hash)) throw new RadarError("No launch found in the recent history range. Use its transaction hash.", "launch_not_found");
   } else hash = value;
 
+  hash = hash.toLowerCase();
   const receipt = await client.getTransactionReceipt({ hash });
   if (!isHash(receipt.transactionHash) || receipt.transactionHash.toLowerCase() !== hash.toLowerCase() || !isHash(receipt.blockHash) || typeof receipt.blockNumber !== "bigint" || receipt.blockNumber < 0n)
     throw new RadarError("The RPC returned an inconsistent transaction receipt.", "invalid_receipt");
@@ -62,7 +63,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
   const expected = token || selectedToken;
   if (expected && !tokens.has(expected.toLowerCase())) throw new RadarError("No matching token launch was found in this transaction.", "token_mismatch");
   if (!expected && tokens.size !== 1) throw new RadarError(tokens.size ? "This transaction contains several launches. Select a token." : "No supported factory launch found in this transaction.", tokens.size ? "ambiguous_launch" : "launch_not_found");
-  token = expected || [...tokens][0];
+  token = getAddress(expected || [...tokens][0]);
 
   const snapshot = await client.getBlock({ blockTag: "latest" });
   if (!isHash(snapshot.hash) || typeof snapshot.number !== "bigint" || snapshot.number < receipt.blockNumber)

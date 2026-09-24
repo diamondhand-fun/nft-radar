@@ -38,9 +38,9 @@ test("require selection for multi-launch receipts; deduplicate token identities"
   const other = "0x" + "33".repeat(20);
   const client = { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), logs: [event(), event(other)] }) };
   await assert.rejects(inspectLaunch(hash, client), /several launches/);
-  assert.equal((await inspectLaunch(hash, client, token)).token, token);
+  assert.equal((await inspectLaunch(hash, client, token)).token.toLowerCase(), token);
   const duplicate = { ...client, getTransactionReceipt: async () => ({ ...receipt(), logs: [event(), event()] }) };
-  assert.equal((await inspectLaunch(hash, duplicate)).token, token);
+  assert.equal((await inspectLaunch(hash, duplicate)).token.toLowerCase(), token);
   await assert.rejects(inspectLaunch(token, client, other), /does not match the input/);
 });
 
@@ -113,4 +113,13 @@ test("expose stable error codes for application error handling", async () => {
   await assert.rejects(inspectLaunch("bad", fixtureClient()), error => error instanceof RadarError && error.code === "invalid_input");
   await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getChainId: async () => 1 }), error => error.code === "wrong_chain");
   await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), status: "reverted" }) }), error => error.code === "launch_reverted");
+});
+
+
+test("normalize report addresses and transaction hashes for stable identity", async () => {
+  const { getAddress } = await import("viem");
+  const result = await inspectLaunch(hash.toUpperCase(), fixtureClient());
+  assert.equal(result.hash, hash);
+  assert.equal(result.token, getAddress(token));
+  assert.equal((await inspectLaunch(token, fixtureClient())).token, result.token);
 });
