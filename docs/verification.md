@@ -28,9 +28,10 @@ must choose one. A selection absent from the receipt is rejected.
 ## Metadata semantics
 
 The reader calls `name()`, `symbol()`, `description()` and `logo()` in parallel.
-These are current reads, which may span different latest blocks. This preserves
-the application's behavior on an RPC that prunes historical contract state.
-No historical or atomic metadata snapshot is claimed.
+The latest block is captured first, and all four reads are pinned to its block
+number. After the reads, both the metadata block and the launch block are
+checked again against their recorded hashes. A changed block rejects the report.
+This needs recent state access, not an archive of the original launch state.
 
 The final line matching `Source NFT: ...` is used, preserving the application
 convention. It must be exactly `https://zecbit.net/item/{collection}/{positive-id}`:
@@ -55,7 +56,8 @@ permission from the original creator is established by these checks.
 
 Based on Diamond Hand's `proof` and `verify-launch` modules. The standalone
 version consolidates the duplicate receipt fetch, validates optional selection,
-and deduplicates token identities before returning the same report schema.
+deduplicates token identities, verifies the receipt transaction hash and pins
+metadata reads to one block. The report also records that metadata block and hash.
 Wallet integrations, launch-writing ABI methods, fee recipients and production
 credentials are excluded. Tests use encoded synthetic EVM events and never call
 a public RPC.

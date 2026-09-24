@@ -45,7 +45,7 @@ test("require selection for multi-launch receipts; deduplicate token identities"
 });
 
 test("detect changed blocks and reject invalid source or image references", async () => {
-  await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getBlock: async () => ({ hash, timestamp: 1n }) }), /block changed/);
+  await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getBlock: async ({ blockNumber = 80_000_000n } = {}) => ({ number: blockNumber, hash, timestamp: 1n }) }), /block changed/);
   for (const patch of [
     { description: "No reference" },
     { description: "Source NFT: https://zecbit.net.evil.test/item/a/1" },
@@ -84,4 +84,26 @@ test("CLI rejects missing and malformed input without network access", () => {
     assert.equal(result.stdout, "");
     assert(result.stderr.trim());
   }
+});
+
+test("reject inconsistent receipt identity and null block hashes", async () => {
+  for (const patch of [{ transactionHash: "0x" + "cc".repeat(32) }, { transactionHash: undefined }, { blockHash: null }, { blockNumber: null }]) {
+    await assert.rejects(inspectLaunch(hash, { ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), ...patch }) }), /inconsistent transaction/);
+  }
+});
+
+test("pin metadata to one block and detect reorganizations during reads", async () => {
+  const client = fixtureClient();
+  const heights = [];
+  const result = await inspectLaunch(hash, { ...client, readContract: async input => {
+    heights.push(input.blockNumber);
+    return client.readContract(input);
+  } });
+  assert.deepEqual(heights, Array(4).fill(80_000_000n));
+  assert.equal(result.metadataBlock, "80000000");
+  const reorg = { ...client, getBlock: async input => ({
+    ...await client.getBlock(input),
+    ...(input.blockNumber === 80_000_000n ? { hash: "0x" + "cc".repeat(32) } : {}),
+  }) };
+  await assert.rejects(inspectLaunch(hash, reorg), /metadata block changed/);
 });

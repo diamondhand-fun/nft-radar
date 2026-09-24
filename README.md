@@ -11,48 +11,41 @@ block consistency, then extracts the Zecbit NFT reference from current token met
 [How it works](docs/verification.md) · [Offline example](examples/demo.mjs) ·
 [Zecbit Parser](https://github.com/diamondhand-fun/zecbit-parser)
 
-## Try it without a wallet
+## Inspect a launch
 
 Requires Node.js 22 or newer. One runtime dependency: `viem`.
+No wallet connection or signing key is required.
 
 ```sh
 npm ci --ignore-scripts
-npm test
-npm run demo
+read -r TX_HASH
+npm run --silent inspect -- "$TX_HASH"
 ```
 
-The demo uses synthetic events and a local client fixture. It makes **zero
-network calls** and requires no keys, tokens, wallet or deployed contracts.
-
-## Inspect a real launch
-
-```sh
-npm run --silent inspect -- <transaction-hash>
-npm run --silent inspect -- <token-address>
-npm run --silent inspect -- <transaction-hash> <selected-token-address>
-```
-
-Replace the angle-bracket placeholders before running. Set `RADAR_RPC_URL` to
-use your own provider. The default deployment preset comes from Diamond Hand:
-chain ID **4663**, factory `0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e`.
-Provider availability is not required or exercised by CI.
+Paste a launch transaction hash when `read` waits for input. The same command
+accepts a token address. For a transaction containing multiple launches, add
+the selected token address as a second argument. `RADAR_RPC_URL` selects a
+custom RPC provider; otherwise the preset's public endpoint is used.
 
 ```js
 import { inspectLaunch, radarClient } from "./src/index.mjs";
 
 const report = await inspectLaunch(transactionHash, radarClient());
-console.log(report.sourceUrl, report.metadataState);
+console.log(report.sourceUrl, report.metadataBlock);
 ```
+
+The deployment preset comes from Diamond Hand: chain ID **4663**, factory
+`0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e`.
 
 ## What gets checked
 
 | Check | Rejection condition |
 | --- | --- |
 | Network | RPC chain ID differs from the deployment preset |
-| Transaction | Receipt is not successful |
+| Transaction | Receipt hash does not match the request, or receipt is not successful |
 | Origin | No matching `TokenLaunched` event from the configured factory |
 | Selection | Multiple token launches without an explicit selection |
-| Block | Receipt block hash differs from the fetched block |
+| Blocks | Launch or metadata block hash changes during inspection |
 | NFT reference | Missing or noncanonical Zecbit item URL |
 | Metadata | Invalid name, ticker or HTTPS artwork reference |
 
@@ -63,13 +56,15 @@ uses the receipt directly; it does not scan the chain.
 ## Report
 
 The JSON report contains `schema`, `chainId`, `factory`, `token`, `hash`,
-`sourceUrl`, `name`, `symbol`, `imageUrl`, `block`, `confirmedAt`, `checkedAt`
-and `metadataState`. Block numbers are decimal strings, so JSON serialization
-does not lose bigint precision.
+`sourceUrl`, `name`, `symbol`, `imageUrl`, `block`, `confirmedAt`, `checkedAt`,
+`metadataState`, `metadataBlock` and `metadataBlockHash`. Block numbers are
+decimal strings, so JSON serialization does not lose bigint precision.
 
-`metadataState: "current"` is explicit: metadata is read now, not reconstructed
-at launch time. `confirmedAt` is the receipt block's timestamp, not a finality
-guarantee. A matching reference establishes what the token claims about its
+`metadataState: "current"` means the latest block captured at the start of
+metadata retrieval. All four contract reads use that exact block number and its
+hash is checked again afterward. Metadata is not reconstructed at launch time.
+`confirmedAt` is the receipt block's timestamp, not a finality guarantee.
+A matching reference establishes what the token claims about its
 source; it does **not** prove NFT ownership, creator identity or endorsement.
 
 ## Scope
@@ -81,6 +76,17 @@ It trusts the configured RPC; it is not a light client or cryptographic proof sy
 
 Pair it with [Zecbit Parser](https://github.com/diamondhand-fun/zecbit-parser)
 to turn the returned source page into structured NFT traits and artwork metadata.
+
+## Development and validation
+
+```sh
+npm test
+npm run demo
+```
+
+Tests cover failure paths and the full CLI → HTTP → JSON-RPC → ABI decoding
+path using a local RPC server. The demo is a reproducible example requiring no
+network. See [validation notes](docs/validation.md) for live checks.
 
 Maintained by [Diamond Hand](https://github.com/diamondhand-fun).
 The package is marked private to prevent accidental npm publication; the repository is public.

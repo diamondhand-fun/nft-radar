@@ -14,12 +14,12 @@ export const event = (address = token) => ({
   topics: encodeEventTopics({ abi: [launchEvent], eventName: "TokenLaunched", args: { token: address, curve: address, deployer: zeroAddress } }),
   data: encodeAbiParameters([{ type: "address" }, { type: "uint256" }, { type: "uint256" }], [zeroAddress, 0n, 1n]),
 });
-export const receipt = () => ({ status: "success", logs: [event()], blockNumber: 79_999_999n, blockHash });
+export const receipt = () => ({ transactionHash: hash, status: "success", logs: [event()], blockNumber: 79_999_999n, blockHash });
 export const fixtureClient = () => ({
   getChainId: async () => chain.id,
   getBlockNumber: async () => 80_000_000n,
   getLogs: async () => [{ transactionHash: hash }],
   getTransactionReceipt: async () => receipt(),
-  getBlock: async () => ({ hash: blockHash, timestamp: 1_800_000_000n }),
+  getBlock: async ({ blockNumber = 80_000_000n } = {}) => ({ number: blockNumber, hash: blockHash, timestamp: 1_800_000_000n }),
   readContract: async ({ functionName }) => metadata[functionName],
 });
