@@ -49,12 +49,14 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
 
   hash = hash.toLowerCase();
   const receipt = await client.getTransactionReceipt({ hash });
-  if (!isHash(receipt.transactionHash) || receipt.transactionHash.toLowerCase() !== hash.toLowerCase() || !isHash(receipt.blockHash) || typeof receipt.blockNumber !== "bigint" || receipt.blockNumber < 0n)
+  if (!Array.isArray(receipt.logs) || !isHash(receipt.transactionHash) || receipt.transactionHash.toLowerCase() !== hash.toLowerCase() || !isHash(receipt.blockHash) || typeof receipt.blockNumber !== "bigint" || receipt.blockNumber < 0n)
     throw new RadarError("The RPC returned an inconsistent transaction receipt.", "invalid_receipt");
   if (receipt.status !== "success") throw new RadarError("This transaction has not confirmed a successful launch.", "launch_reverted");
   const tokens = new Set();
   for (const log of receipt.logs) {
-    if (log.address.toLowerCase() !== factory.toLowerCase()) continue;
+    if (log?.removed || typeof log?.address !== "string" || log.address.toLowerCase() !== factory.toLowerCase()) continue;
+    if (!isHash(log.transactionHash) || log.transactionHash.toLowerCase() !== hash || !isHash(log.blockHash) || log.blockHash.toLowerCase() !== receipt.blockHash.toLowerCase() || log.blockNumber !== receipt.blockNumber)
+      throw new RadarError("The RPC returned a log from a different receipt or block.", "invalid_receipt");
     try {
       const event = decodeEventLog({ abi: [launchEvent], data: log.data, topics: log.topics });
       tokens.add(event.args.token.toLowerCase());

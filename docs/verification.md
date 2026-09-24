@@ -20,7 +20,9 @@ Windows are contiguous, bounded and include both endpoints. The first matching
 transaction becomes the candidate; its receipt must independently contain the
 matching factory event. A supplied transaction hash skips log scanning.
 
-Only `TokenLaunched` events emitted by the preset factory count. Malformed and
+Only `TokenLaunched` events emitted by the preset factory count. Removed logs
+are discarded, and matching logs must belong to the same transaction and block
+as the receipt. Malformed and
 unrelated logs are ignored. Repeated events for the same token are deduplicated
 case-insensitively. If a receipt launches multiple different tokens, the caller
 must choose one. A selection absent from the receipt is rejected.

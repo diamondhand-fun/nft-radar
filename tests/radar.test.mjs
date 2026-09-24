@@ -123,3 +123,13 @@ test("normalize report addresses and transaction hashes for stable identity", as
   assert.equal(result.token, getAddress(token));
   assert.equal((await inspectLaunch(token, fixtureClient())).token, result.token);
 });
+
+
+test("discard removed logs and reject event identities outside the receipt", async () => {
+  const withLogs = logs => ({ ...fixtureClient(), getTransactionReceipt: async () => ({ ...receipt(), logs }) });
+  await assert.rejects(inspectLaunch(hash, withLogs([{ ...event(), removed: true }])), error => error.code === "launch_not_found");
+  for (const patch of [{ transactionHash: "0x" + "cc".repeat(32) }, { blockHash: "0x" + "cc".repeat(32) }, { blockNumber: 1n }]) {
+    await assert.rejects(inspectLaunch(hash, withLogs([{ ...event(), ...patch }])), error => error.code === "invalid_receipt");
+  }
+  assert.equal((await inspectLaunch(hash, withLogs([null, {}, event()]))).hash, hash);
+});

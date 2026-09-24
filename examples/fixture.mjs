@@ -10,7 +10,7 @@ export const metadata = {
   logo: "https://example.com/synthetic.png",
 };
 export const event = (address = token) => ({
-  address: factory,
+  address: factory, transactionHash: hash, blockHash, blockNumber: 79_999_999n, removed: false,
   topics: encodeEventTopics({ abi: [launchEvent], eventName: "TokenLaunched", args: { token: address, curve: address, deployer: zeroAddress } }),
   data: encodeAbiParameters([{ type: "address" }, { type: "uint256" }, { type: "uint256" }], [zeroAddress, 0n, 1n]),
 });
