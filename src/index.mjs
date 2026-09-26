@@ -144,7 +144,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     const url = new URL(logo);
     if (url.protocol === "https:" && !url.username && !url.password && !url.port) imageUrl = url.href;
   } catch { /* Invalid media references fail the metadata check below. */ }
-  if (!source || typeof name !== "string" || !name.trim() || name.length > 256 || typeof symbol !== "string" || !/^[A-Za-z0-9]{1,16}$/.test(symbol) || !imageUrl)
+  if (!source || typeof name !== "string" || !name.trim() || name.length > 256 || /[\x00-\x1f\x7f]/.test(name) || typeof symbol !== "string" || !/^[A-Za-z0-9]{1,16}$/.test(symbol) || !imageUrl)
     throw new RadarError("This token does not contain supported Zecbit metadata.", "invalid_metadata");
   return {
     schema: "diamond-hand.launch-check.v1", chainId: chain.id, factory,

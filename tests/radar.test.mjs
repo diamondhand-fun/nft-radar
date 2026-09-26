@@ -4,6 +4,15 @@ import { spawnSync } from "node:child_process";
 import { inspectLaunch, factory, RadarError } from "../src/index.mjs";
 import { token, hash, metadata, event, receipt, fixtureClient } from "../examples/fixture.mjs";
 
+test("reject control characters in token display names", async () => {
+  const client = fixtureClient();
+  for (const name of ["Synthetic\nlaunch", "SYN\r", "SYN\0", "SYN\x1b[31m", "SYN\x7f"]) {
+    await assert.rejects(inspectLaunch(hash, { ...client, readContract: async input => input.functionName === "name" ? name : client.readContract(input) }), error => error.code === "invalid_metadata");
+  }
+  const report = await inspectLaunch(hash, { ...client, readContract: async input => input.functionName === "name" ? "Synthetic 💎" : client.readContract(input) });
+  assert.equal(report.name, "Synthetic 💎");
+});
+
 test("inspect a transaction and token without a wallet", async () => {
   for (const input of [hash, token]) {
     const result = await inspectLaunch(input, fixtureClient());
