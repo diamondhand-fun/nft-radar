@@ -318,6 +318,18 @@ test("reject zero token addresses before issuing RPC calls", async () => {
   await assert.rejects(inspectLaunch(hash, client, zero), error => error.code === "invalid_selection");
 });
 
+test("reject zero token launch events before reading metadata", async () => {
+  const zero = "0x" + "00".repeat(20);
+  for (const logs of [[event(zero)], [event(), event(zero)]]) {
+    const client = {
+      ...fixtureClient(),
+      getTransactionReceipt: async () => ({ ...receipt(), logs }),
+      readContract: () => assert.fail("Invalid launch must not read metadata"),
+    };
+    await assert.rejects(inspectLaunch(hash, client), error => error.code === "invalid_receipt");
+  }
+});
+
 
 test("require exact launch event ABI framing including topic and data lengths", async () => {
   for (const log of [{ ...event(), data: event().data + "00".repeat(32) }, { ...event(), topics: [...event().topics, hash] }, { ...event(), topics: event().topics.slice(0, 3) }]) {

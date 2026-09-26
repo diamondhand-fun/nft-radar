@@ -100,6 +100,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     try { event = decodeEventLog({ abi: [launchEvent], data: log.data, topics: log.topics }); }
     catch { continue; } // Ignore unrelated or malformed logs.
     const key = event.args.token.toLowerCase();
+    if (key === zeroAddress) throw new RadarError("The receipt contains a launch with a zero token address.", "invalid_receipt");
     const previous = tokens.get(key);
     if (previous && Object.keys(previous).some(field => previous[field].toString().toLowerCase() !== event.args[field].toString().toLowerCase()))
       throw new RadarError("The receipt contains conflicting launch events for one token.", "invalid_receipt");
