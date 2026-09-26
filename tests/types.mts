@@ -22,3 +22,7 @@ inspectLaunch("input", client, undefined, { fromBlock: 71000000n, toBlock: 72000
 });
 // @ts-expect-error Pending state cannot verify a confirmed launch.
 inspectLaunch("input", client, undefined, { blockTag: "pending" });
+
+inspectLaunch("input", client, undefined, { scanWindow: 10000 });
+// @ts-expect-error Scan windows are numeric block counts.
+inspectLaunch("input", client, undefined, { scanWindow: "10000" });

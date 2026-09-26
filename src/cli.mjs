@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { inspectLaunch, radarClient, RadarError } from "./index.mjs";
 
-const usage = "Usage: npm run --silent inspect -- [--confirmations N] [--timeout MS] [--block-tag latest|safe|finalized] [--from-block N] [--to-block N] [--output FILE] [--json-errors] <token-or-tx-hash> [selected-token]";
+const usage = "Usage: npm run --silent inspect -- [--confirmations N] [--timeout MS] [--block-tag latest|safe|finalized] [--scan-window N] [--from-block N] [--to-block N] [--output FILE] [--json-errors] <token-or-tx-hash> [selected-token]";
 const jsonErrors = process.argv.includes("--json-errors");
 try {
   let args;
@@ -12,6 +12,7 @@ try {
       help: { type: "boolean", short: "h" }, "json-errors": { type: "boolean" },
       output: { type: "string" },
       "block-tag": { type: "string", default: "latest" },
+      "scan-window": { type: "string", default: "800000" },
       "from-block": { type: "string" }, "to-block": { type: "string" },
       confirmations: { type: "string", default: "1" }, timeout: { type: "string", default: "12000" },
     } });
@@ -20,7 +21,7 @@ try {
   if (values.help) console.log(usage);
   else {
     if (positionals.length < 1 || positionals.length > 2) throw new RadarError(usage, "invalid_input");
-    if (![values.confirmations, values.timeout].every(value => /^[1-9][0-9]*$/.test(value))) throw new RadarError("Confirmations and timeout must be positive integers.", "invalid_options");
+    if (![values.confirmations, values.timeout, values["scan-window"]].every(value => /^[1-9][0-9]*$/.test(value))) throw new RadarError("Confirmations, timeout and scan window must be positive integers.", "invalid_options");
     const bounds = {};
     for (const [flag, key] of [["from-block", "fromBlock"], ["to-block", "toBlock"]]) {
       if (values[flag] !== undefined) {
@@ -30,7 +31,7 @@ try {
     }
     if (values.output !== undefined && !values.output.trim()) throw new RadarError("Output path must not be empty.", "invalid_options");
     const client = radarClient(process.env.RADAR_RPC_URL, { timeoutMs: Number(values.timeout) });
-    const report = await inspectLaunch(positionals[0], client, positionals[1], { minConfirmations: Number(values.confirmations), blockTag: values["block-tag"], ...bounds });
+    const report = await inspectLaunch(positionals[0], client, positionals[1], { minConfirmations: Number(values.confirmations), scanWindow: Number(values["scan-window"]), blockTag: values["block-tag"], ...bounds });
     const json = JSON.stringify(report, null, 2) + "\n";
     if (values.output === undefined) process.stdout.write(json);
     else {

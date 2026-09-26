@@ -4,6 +4,16 @@ import { spawnSync } from "node:child_process";
 import { inspectLaunch, factory, RadarError } from "../src/index.mjs";
 import { token, hash, metadata, event, receipt, fixtureClient } from "../examples/fixture.mjs";
 
+test("use a provider-specific scan window without gaps", async () => {
+  const ranges = [];
+  const client = { ...fixtureClient(), getLogs: async input => { ranges.push([input.fromBlock, input.toBlock]); return []; } };
+  await assert.rejects(inspectLaunch(token, client, undefined, { fromBlock: 79_999_995n, scanWindow: 2 }), error => error.code === "launch_not_found");
+  assert.deepEqual(ranges, [[79_999_999n, 80_000_000n], [79_999_997n, 79_999_998n], [79_999_995n, 79_999_996n]]);
+  for (const scanWindow of [0, -1, 1.5, 800_001, NaN]) {
+    await assert.rejects(inspectLaunch(token, { getChainId: () => assert.fail("Invalid window must not call RPC") }, undefined, { scanWindow }), error => error.code === "invalid_options");
+  }
+});
+
 test("reject control characters in token display names", async () => {
   const client = fixtureClient();
   for (const name of ["Synthetic\nlaunch", "SYN\r", "SYN\0", "SYN\x1b[31m", "SYN\x7f"]) {

@@ -41,4 +41,4 @@ export type LaunchReport = {
 };
 export type RadarClient = Pick<PublicClient, "getChainId" | "getBlockNumber" | "getLogs" | "getTransactionReceipt" | "getBlock" | "readContract">;
 export function radarClient(rpcUrl?: string, options?: { signal?: AbortSignal; timeoutMs?: number }): PublicClient;
-export function inspectLaunch(input: string, client?: RadarClient, selectedToken?: Address, options?: { minConfirmations?: number; fromBlock?: bigint; toBlock?: bigint; blockTag?: "latest" | "safe" | "finalized" }): Promise<LaunchReport>;
+export function inspectLaunch(input: string, client?: RadarClient, selectedToken?: Address, options?: { minConfirmations?: number; scanWindow?: number; fromBlock?: bigint; toBlock?: bigint; blockTag?: "latest" | "safe" | "finalized" }): Promise<LaunchReport>;

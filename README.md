@@ -50,7 +50,9 @@ The deployment preset comes from Diamond Hand: chain ID **4663**, factory
 | Metadata | Invalid name, ticker or HTTPS artwork reference |
 
 Token lookup scans at most ten successful windows of up to 800,000 blocks,
-never below block 70,000,000. When a provider rejects a log range, the window
+never below block 70,000,000. Set `{ scanWindow: 10000 }` or CLI
+`--scan-window 10000` to start with your provider's block-range limit
+(1–800,000 blocks), avoiding failed oversized requests. When a provider rejects a log range, the window
 is halved without skipping blocks. Each lookup is capped at 40 RPC attempts. For older launches, supply the transaction hash or set explicit history bounds
 with `{ fromBlock: 71000000n, toBlock: 72000000n }`. The CLI equivalents are
 `--from-block 71000000 --to-block 72000000`; these apply only to token lookup

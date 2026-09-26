@@ -37,7 +37,8 @@ export function radarClient(rpcUrl, { signal, timeoutMs = 12_000 } = {}) {
   }) });
 }
 
-export async function inspectLaunch(input, client = radarClient(), selectedToken, { minConfirmations = 1, fromBlock, toBlock, blockTag = "latest" } = {}) {
+export async function inspectLaunch(input, client = radarClient(), selectedToken, { minConfirmations = 1, scanWindow = 800_000, fromBlock, toBlock, blockTag = "latest" } = {}) {
+  if (!Number.isSafeInteger(scanWindow) || scanWindow < 1 || scanWindow > 800_000) throw new RadarError("Scan window must be between 1 and 800000 blocks.", "invalid_options");
   if (!Number.isSafeInteger(minConfirmations) || minConfirmations < 1) throw new RadarError("Minimum confirmations must be a positive integer.", "invalid_options");
   if (!["latest", "safe", "finalized"].includes(blockTag)) throw new RadarError("Metadata block tag must be latest, safe or finalized.", "invalid_options");
   const value = typeof input === "string" ? input.trim() : "";
@@ -57,7 +58,7 @@ export async function inspectLaunch(input, client = radarClient(), selectedToken
     const floor = fromBlock ?? 70_000_000n;
     const scanEnd = end;
     // ponytail: at most ten successful windows and forty RPC attempts per lookup.
-    let span = 800_000n, windows = 0, attempts = 0;
+    let span = BigInt(scanWindow), windows = 0, attempts = 0;
     while (windows < 10 && attempts < 40 && end >= floor) {
       const start = end - span + 1n > floor ? end - span + 1n : floor;
       let logs;
