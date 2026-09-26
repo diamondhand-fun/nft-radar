@@ -34,7 +34,7 @@ try {
     const client = radarClient(process.env.RADAR_RPC_URL, { timeoutMs: Number(values.timeout), signal: values.deadline === undefined ? undefined : AbortSignal.timeout(Number(values.deadline)) });
     const report = await inspectLaunch(positionals[0], client, positionals[1], { minConfirmations: Number(values.confirmations), scanWindow: Number(values["scan-window"]), blockTag: values["block-tag"], ...bounds });
     const json = JSON.stringify(report, null, 2) + "\n";
-    if (values.output === undefined) process.stdout.write(json);
+    if (values.output === undefined || values.output === "-") process.stdout.write(json);
     else {
       let directory;
       try {

@@ -84,6 +84,7 @@ test("CLI crosses the real HTTP/JSON-RPC and ABI boundary", async () => {
     const output = join(directory, "launch.json");
     const save = async (destination, suffix = "") => {
       const saving = spawn(process.execPath, [new URL("../src/cli.mjs", import.meta.url).pathname, "--json-errors", "--output", destination, hash], {
+        cwd: directory,
         env: { ...process.env, RADAR_RPC_URL: `http://127.0.0.1:${server.address().port}${suffix}` },
       });
       let stdout = "", stderr = "";
@@ -93,6 +94,10 @@ test("CLI crosses the real HTTP/JSON-RPC and ABI boundary", async () => {
       return { code, stdout, stderr };
     };
     try {
+      const piped = await save("-");
+      assert.equal(piped.code, 0, piped.stderr);
+      assert.equal(JSON.parse(piped.stdout).hash, hash);
+      assert.deepEqual(await readdir(directory), []);
       const saved = await save(output);
       assert.equal(saved.code, 0, saved.stderr);
       assert.equal(saved.stdout, "");

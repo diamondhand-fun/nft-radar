@@ -140,6 +140,7 @@ Save a report with `--output launch.json`. The CLI publishes the complete JSON
 file atomically with permissions `0600` and refuses to overwrite an existing
 file. The parent directory must exist. With this option, stdout stays empty;
 save failures use `output_error` and leave existing reports intact.
+Use `--output -` to explicitly write the report to stdout for pipelines.
 
 If a bounded token scan finds no launch, `RadarError.details` records its bounds,
 RPC attempts, successful windows and `nextToBlock`. Pass a non-null cursor back
