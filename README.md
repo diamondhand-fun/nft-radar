@@ -119,7 +119,9 @@ inspection time; confirmation depth does not guarantee permanent finality.
 RPC responses are limited to 2 MB and each complete transfer, including the
 response body, has a 12-second deadline. Use
 `radarClient(url, { signal, timeoutMs: 5000 })` for cancellation or a tighter
-deadline. Timeouts must be 1–120,000 ms. Failed requests are not retried.
+deadline. Timeouts must be 1–120,000 ms. CLI `--deadline 30000`
+limits all RPC work in one inspection to 30 seconds, including log scans
+and metadata reads (1–600,000 ms). Without it, only per-request timeouts apply. Failed requests are not retried.
 
 For automation, the CLI accepts `--confirmations 12`, `--timeout 5000` and
 `--json-errors`. Reports go to stdout; failures go to stderr as

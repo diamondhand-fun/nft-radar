@@ -376,3 +376,12 @@ test("expose a resumable scan cursor and distinguish exhausted history", async (
     return error.code === "launch_not_found";
   });
 });
+
+
+test("CLI rejects invalid overall deadlines before RPC access", () => {
+  for (const value of ["0", "-1", "1.5", "600001", "NaN"]) {
+    const result = spawnSync(process.execPath, [new URL("../src/cli.mjs", import.meta.url).pathname, "--json-errors", `--deadline=${value}`, hash], { encoding: "utf8" });
+    assert.equal(result.status, 1);
+    assert.equal(JSON.parse(result.stderr).error.code, "invalid_options");
+  }
+});

@@ -6,6 +6,7 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import { setTimeout as delay } from "node:timers/promises";
 import { encodeAbiParameters } from "viem";
 import { event, token, hash, blockHash, metadata } from "../examples/fixture.mjs";
 
@@ -23,6 +24,7 @@ test("CLI crosses the real HTTP/JSON-RPC and ABI boundary", async () => {
     let raw = "";
     for await (const chunk of request) raw += chunk;
     const { id, method, params } = JSON.parse(raw);
+    if (request.url === "/slow") await delay(150);
     methods.push(method);
     let result;
     if (method === "eth_chainId") result = "0x1237";
@@ -68,6 +70,16 @@ test("CLI crosses the real HTTP/JSON-RPC and ABI boundary", async () => {
     assert.equal(failedCode, 1);
     assert.equal(JSON.parse(failure).error.code, "rpc_error");
     assert(!failure.includes("provider-secret"));
+    const limited = spawn(process.execPath, [new URL("../src/cli.mjs", import.meta.url).pathname, "--json-errors", "--deadline", "250", hash], {
+      env: { ...process.env, RADAR_RPC_URL: `http://127.0.0.1:${server.address().port}/slow` },
+    });
+    let deadlineError = "", deadlineOutput = "";
+    limited.stderr.on("data", chunk => { deadlineError += chunk; });
+    limited.stdout.on("data", chunk => { deadlineOutput += chunk; });
+    const [limitedCode] = await once(limited, "close");
+    assert.equal(limitedCode, 1);
+    assert.equal(deadlineOutput, "");
+    assert.equal(JSON.parse(deadlineError).error.code, "rpc_error");
     const directory = await mkdtemp(join(tmpdir(), "radar-output-"));
     const output = join(directory, "launch.json");
     const save = async (destination, suffix = "") => {
